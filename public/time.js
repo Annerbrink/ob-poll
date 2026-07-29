@@ -47,6 +47,24 @@ var OB_TIME = (function () {
       var date = new Date(iso);
       if (isNaN(date.getTime())) return '';
       return date.toLocaleString('sv-SE', Object.assign({ timeZone: ZONE }, options));
+    },
+
+    /** "om 2 timmar", "för 5 minuter sedan", "i morgon" — relative to now, in Swedish. */
+    relative: function (iso) {
+      if (!iso) return '';
+      var date = new Date(iso);
+      if (isNaN(date.getTime())) return '';
+
+      var diffMs = date.getTime() - Date.now();
+      var rtf = new Intl.RelativeTimeFormat('sv', { numeric: 'auto' });
+      var units = [['day', 86400000], ['hour', 3600000], ['minute', 60000]];
+
+      for (var i = 0; i < units.length; i++) {
+        if (Math.abs(diffMs) >= units[i][1] || units[i][0] === 'minute') {
+          return rtf.format(Math.round(diffMs / units[i][1]), units[i][0]);
+        }
+      }
+      return '';
     }
   };
 })();

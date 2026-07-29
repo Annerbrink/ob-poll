@@ -21,11 +21,15 @@
     category: document.getElementById('category'),
     fixture: document.getElementById('fixture'),
     kickoff: document.getElementById('kickoff'),
+    status: document.getElementById('status'),
     choices: document.getElementById('choices'),
     results: document.getElementById('results'),
     summary: document.getElementById('summary'),
+    thanks: document.getElementById('thanks'),
     error: document.getElementById('error')
   };
+
+  var thanksTimer = null;
 
   var rows = {};
   var labels = { '1': '', X: 'Oavgjort', '2': '' };
@@ -100,7 +104,7 @@
       row.className = 'row';
       row.innerHTML =
         '<div class="row-head"><span class="name"></span><span class="pct">0 %</span></div>' +
-        '<div class="track"><div class="fill"></div></div>' +
+        '<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div></div>' +
         '<p class="count"></p>';
       el.results.appendChild(row);
       rows[choice] = row;
@@ -112,6 +116,37 @@
       weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
     });
     return formatted ? 'Avspark ' + formatted : '';
+  }
+
+  /** A short line about whether voting is open, and for how much longer. */
+  function statusText(poll) {
+    if (poll.closed) {
+      var stopped = OB_TIME.format(poll.closesAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      return stopped ? 'Röstningen stängde ' + stopped : 'Röstningen är stängd';
+    }
+    if (poll.closesAt) {
+      var relative = OB_TIME.relative(poll.closesAt);
+      return relative ? 'Röstning öppen – stänger ' + relative : 'Röstning öppen';
+    }
+    return 'Röstning öppen';
+  }
+
+  /** The single most-picked sign, or null on a tie or before any votes. */
+  function leader(poll) {
+    if (poll.total === 0) return null;
+    var best = null, bestCount = -1, tie = false;
+    CHOICES.forEach(function (choice) {
+      var count = poll.counts[choice];
+      if (count > bestCount) { best = choice; bestCount = count; tie = false; }
+      else if (count === bestCount) { tie = true; }
+    });
+    return tie ? null : best;
+  }
+
+  function flashThanks() {
+    el.thanks.hidden = false;
+    clearTimeout(thanksTimer);
+    thanksTimer = setTimeout(function () { el.thanks.hidden = true; reportHeight(); }, 2500);
   }
 
   function render(poll) {
@@ -131,8 +166,11 @@
 
     el.fixture.textContent = poll.homeTeam + ' – ' + poll.awayTeam;
     el.kickoff.textContent = formatKickoff(poll);
+    el.status.textContent = statusText(poll);
     document.getElementById('team-home').textContent = poll.homeTeam;
     document.getElementById('team-away').textContent = poll.awayTeam;
+
+    var leadChoice = poll.closed ? leader(poll) : null;
 
     CHOICES.forEach(function (choice) {
       var row = rows[choice];
@@ -140,19 +178,27 @@
       var count = poll.counts[choice];
 
       row.classList.toggle('mine', mine === choice);
+      row.classList.toggle('winner', leadChoice === choice);
       row.querySelector('.name').textContent = choice + ' · ' + labels[choice];
       row.querySelector('.pct').textContent = percent + ' %';
       row.querySelector('.fill').style.width = percent + '%';
       row.querySelector('.count').textContent = count + (count === 1 ? ' röst' : ' röster');
 
+      var track = row.querySelector('.track');
+      track.setAttribute('aria-valuenow', percent);
+      track.setAttribute('aria-valuetext', labels[choice] + ': ' + percent + ' %');
+
       var button = el.choices.querySelector('.choice[data-choice="' + choice + '"]');
       button.setAttribute('aria-pressed', mine === choice ? 'true' : 'false');
+      button.setAttribute('aria-label', 'Rösta på ' + labels[choice]);
       button.disabled = poll.closed;
     });
 
     var votes = poll.total + (poll.total === 1 ? ' röst' : ' röster');
     if (poll.closed) {
-      el.summary.textContent = 'Omröstningen är stängd · ' + votes;
+      el.summary.textContent = leadChoice
+        ? 'Flest tippade ' + labels[leadChoice] + ' · ' + votes
+        : 'Omröstningen är stängd · ' + votes;
     } else if (mine) {
       el.summary.textContent = 'Du tippade ' + labels[mine] + ' och totalt ' + votes;
     } else {
@@ -200,6 +246,7 @@
       .then(function (body) {
         myVote(body.poll.yourVote);
         render(body.poll);
+        flashThanks();
       })
       .catch(function (error) { showError(error.message); });
   });
@@ -260,6 +307,7 @@
     poll.total = CHOICES.reduce(function (sum, key) { return sum + poll.counts[key]; }, 0);
     poll.percentages = previewPercentages(poll.counts);
     render(poll);
+    flashThanks();
   }
 
   /** The same largest-remainder rounding the server uses, for the preview only. */
