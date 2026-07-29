@@ -165,13 +165,13 @@
   function statusText(poll) {
     if (poll.closed) {
       var stopped = OB_TIME.format(poll.closesAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      return stopped ? 'Röstningen stängde ' + stopped : 'Röstningen är stängd';
+      return stopped ? 'Omröstningen stängde ' + stopped : 'Omröstningen är stängd';
     }
     if (poll.closesAt) {
       var relative = OB_TIME.relative(poll.closesAt);
-      return relative ? 'Röstning öppen – stänger ' + relative : 'Röstning öppen';
+      return relative ? 'Omröstningen öppen – stänger ' + relative : 'Omröstningen öppen';
     }
-    return 'Röstning öppen';
+    return 'Omröstningen öppen';
   }
 
   /** The single most-picked sign, or null on a tie or before any votes. */

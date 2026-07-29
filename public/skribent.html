@@ -207,6 +207,14 @@
   .edit-form { flex-basis: 100%; }
   .edit-form .form-actions { margin-bottom: 0; }
 
+  /* Smooth enter/exit for cards that appear and disappear. */
+  .anim { transition: opacity .2s ease, transform .2s ease; }
+  .anim.enter { opacity: 0; transform: translateY(8px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .anim { transition: none; }
+  }
+
   .poll-item:first-of-type { border-top: 0; }
 
   .poll-item h3 { margin: 0 0 .1875rem; font-size: .9375rem; }
@@ -394,7 +402,7 @@
       </div>
       <div class="full kickoff-row">
         <div class="kickoff-field">
-          <label for="kickoff">Avspark <span class="hint">(röstningen stänger här)</span></label>
+          <label for="kickoff">Avspark <span class="hint">(omröstningen stänger här)</span></label>
           <input id="kickoff" type="datetime-local" required>
         </div>
         <div class="form-actions create-actions">
@@ -568,8 +576,8 @@
     document.getElementById('embed-code').value = embedCode(poll);
     previewFrame.src = previewUrlForPoll(poll);
     document.getElementById('embed-panel').hidden = false;
-    document.getElementById('side-card').hidden = false;
     document.getElementById('side-hint').hidden = true;
+    animateCard(document.getElementById('side-card'), true);
     document.getElementById('side-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -612,8 +620,8 @@
   function showPreview(url) {
     previewFrame.src = url;
     document.getElementById('embed-panel').hidden = true;
-    document.getElementById('side-card').hidden = false;
     document.getElementById('side-hint').hidden = true;
+    animateCard(document.getElementById('side-card'), true);
     document.getElementById('side-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -671,6 +679,31 @@
       });
   });
 
+  /** Fades and slides a card in when shown, and out before it's hidden. */
+  function animateCard(el, show) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.hidden = !show;
+      return;
+    }
+    el.classList.add('anim');
+    if (show) {
+      if (!el.hidden) return;
+      el.hidden = false;
+      el.classList.add('enter');
+      void el.offsetHeight;
+      requestAnimationFrame(function () { el.classList.remove('enter'); });
+    } else {
+      if (el.hidden) return;
+      el.classList.add('enter');
+      var done = function (event) {
+        if (event.target !== el || event.propertyName !== 'opacity') return;
+        el.hidden = true;
+        el.removeEventListener('transitionend', done);
+      };
+      el.addEventListener('transitionend', done);
+    }
+  }
+
   var toastTimer = null;
   function showToast(message) {
     var toast = document.getElementById('toast');
@@ -680,7 +713,7 @@
     toastTimer = setTimeout(function () { toast.hidden = true; }, 2500);
   }
 
-  /** Två lägen: Öppen = går att rösta på, Stängd = röstningen har stängt. */
+  /** Två lägen: Öppen = går att rösta på, Stängd = omröstningen har stängt. */
   function pollStatus(poll) {
     return poll.closed
       ? { key: 'closed', label: 'Stängd' }
@@ -787,7 +820,7 @@
 
     var cancel = document.createElement('button');
     cancel.className = 'secondary'; cancel.type = 'button'; cancel.textContent = 'Avbryt';
-    cancel.addEventListener('click', function () { form.hidden = true; });
+    cancel.addEventListener('click', function () { animateCard(form, false); });
 
     var formActions = document.createElement('div');
     formActions.className = 'form-actions';
@@ -922,7 +955,7 @@
 
       var show = iconAction('eye', 'Förhandsvisa & kod', function () { showPollPanels(poll); });
       var open = iconAction('external', 'Visa i ny flik', { href: 'widget.html?poll=' + encodeURIComponent(poll.id) });
-      var edit = iconAction('edit', 'Redigera', function () { editForm.hidden = !editForm.hidden; });
+      var edit = iconAction('edit', 'Redigera', function () { animateCard(editForm, editForm.hidden); });
       var duplicate = iconAction('copy', 'Duplicera', function () { duplicatePoll(poll); });
       var remove = iconAction('trash', 'Ta bort', function () {
         if (!confirm('Ta bort omröstningen och alla röster?')) return;
