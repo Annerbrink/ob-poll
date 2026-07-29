@@ -27,11 +27,12 @@ function createSqliteRepository({ file = path.join(__dirname, '..', 'data', 'pol
   db.pragma('foreign_keys = ON');
   db.exec(fs.readFileSync(SCHEMA, 'utf8'));
   addTallyColumns(db);
+  addCategoryColumn(db);
 
   const statements = {
     insertPoll: db.prepare(`
-      INSERT INTO polls (id, home_team, away_team, kickoff, closes_at, created_by, created_at)
-      VALUES (@id, @homeTeam, @awayTeam, @kickoff, @closesAt, @createdBy, @createdAt)
+      INSERT INTO polls (id, home_team, away_team, kickoff, closes_at, category, created_by, created_at)
+      VALUES (@id, @homeTeam, @awayTeam, @kickoff, @closesAt, @category, @createdBy, @createdAt)
     `),
     selectPoll: db.prepare('SELECT * FROM polls WHERE id = ?'),
     selectPolls: db.prepare('SELECT * FROM polls ORDER BY created_at DESC LIMIT ?'),
@@ -68,13 +69,14 @@ function createSqliteRepository({ file = path.join(__dirname, '..', 'data', 'pol
   });
 
   return {
-    async createPoll({ homeTeam, awayTeam, kickoff = null, closesAt = null, createdBy = null }) {
+    async createPoll({ homeTeam, awayTeam, kickoff = null, closesAt = null, category = null, createdBy = null }) {
       const poll = {
         id: buildId(homeTeam, awayTeam),
         homeTeam,
         awayTeam,
         kickoff,
         closesAt,
+        category,
         createdBy,
         createdAt: new Date().toISOString()
       };
@@ -136,6 +138,13 @@ function addTallyColumns(db) {
       `).run(choice);
     }
   })();
+}
+
+/** Brings a database created before the category column existed up to date. */
+function addCategoryColumn(db) {
+  const columns = db.prepare('PRAGMA table_info(polls)').all().map(column => column.name);
+  if (columns.includes('category')) return;
+  db.prepare('ALTER TABLE polls ADD COLUMN category TEXT').run();
 }
 
 module.exports = { createSqliteRepository };

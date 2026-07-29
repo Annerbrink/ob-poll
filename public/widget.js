@@ -6,7 +6,11 @@
   // Comfortably longer than the results cache, so a stale copy can't outlive it.
   var FRESH_AFTER_VOTE_MS = 25000;
 
-  var pollId = new URLSearchParams(location.search).get('poll');
+  var params = new URLSearchParams(location.search);
+  var pollId = params.get('poll');
+  // Renders straight from the query string without touching the API, so an
+  // author can see the widget while still filling in the create form.
+  var previewMode = params.get('preview') === '1';
   var timer = null;
   var loading = false;
   var closed = false;
@@ -14,6 +18,7 @@
   var el = {
     loading: document.getElementById('loading'),
     content: document.getElementById('content'),
+    category: document.getElementById('category'),
     fixture: document.getElementById('fixture'),
     kickoff: document.getElementById('kickoff'),
     choices: document.getElementById('choices'),
@@ -24,6 +29,7 @@
 
   var rows = {};
   var labels = { '1': '', X: 'Oavgjort', '2': '' };
+  var CATEGORY_LABELS = { herr: 'Herr', dam: 'Dam' };
 
   /**
    * Both the reader id and the sign they picked live in localStorage, because
@@ -119,6 +125,10 @@
       stopRefreshing();
     }
 
+    var category = CATEGORY_LABELS[poll.category];
+    el.category.textContent = category || '';
+    el.category.hidden = !category;
+
     el.fixture.textContent = poll.homeTeam + ' – ' + poll.awayTeam;
     el.kickoff.textContent = formatKickoff(poll);
     document.getElementById('team-home').textContent = poll.homeTeam;
@@ -144,7 +154,7 @@
     if (poll.closed) {
       el.summary.textContent = 'Omröstningen är stängd · ' + votes;
     } else if (mine) {
-      el.summary.textContent = 'Du tippade ' + mine + ' · ' + votes;
+      el.summary.textContent = 'Du tippade ' + labels[mine] + ' och totalt ' + votes;
     } else {
       el.summary.textContent = poll.total === 0
         ? 'Inga röster än – tippa 1, X eller 2'
@@ -177,6 +187,12 @@
     if (!button || button.disabled) return;
 
     el.error.hidden = true;
+
+    if (previewMode) {
+      simulateVote(button.dataset.choice);
+      return;
+    }
+
     request('/api/polls/' + encodeURIComponent(pollId) + '/votes', {
       method: 'POST',
       body: JSON.stringify({ choice: button.dataset.choice })
@@ -212,7 +228,63 @@
     timer = null;
   }
 
-  if (!pollId) {
+  /** A poll assembled from the query string, shown before anything is saved. */
+  var preview = null;
+  function previewPoll() {
+    if (!preview) {
+      preview = {
+        id: 'preview',
+        homeTeam: params.get('home') || 'Hemmalag',
+        awayTeam: params.get('away') || 'Bortalag',
+        kickoff: params.get('kickoff') || null,
+        closesAt: params.get('closes') || null,
+        category: params.get('category') || null,
+        closed: false,
+        counts: { '1': 0, X: 0, '2': 0 },
+        percentages: { '1': 0, X: 0, '2': 0 },
+        total: 0,
+        yourVote: null
+      };
+    }
+    return preview;
+  }
+
+  /** Moves the preview's vote and re-tallies it locally, no request involved. */
+  function simulateVote(choice) {
+    var poll = previewPoll();
+    if (poll.yourVote === choice) return;
+
+    if (poll.yourVote) poll.counts[poll.yourVote] -= 1;
+    poll.counts[choice] += 1;
+    poll.yourVote = choice;
+    poll.total = CHOICES.reduce(function (sum, key) { return sum + poll.counts[key]; }, 0);
+    poll.percentages = previewPercentages(poll.counts);
+    render(poll);
+  }
+
+  /** The same largest-remainder rounding the server uses, for the preview only. */
+  function previewPercentages(counts) {
+    var total = CHOICES.reduce(function (sum, key) { return sum + counts[key]; }, 0);
+    if (total === 0) return { '1': 0, X: 0, '2': 0 };
+
+    var exact = CHOICES.map(function (key) { return (counts[key] / total) * 100; });
+    var whole = exact.map(Math.floor);
+    var remaining = 100 - whole.reduce(function (a, b) { return a + b; }, 0);
+
+    exact
+      .map(function (value, index) { return { index: index, fraction: value - whole[index] }; })
+      .sort(function (a, b) { return b.fraction - a.fraction; })
+      .slice(0, remaining)
+      .forEach(function (entry) { whole[entry.index] += 1; });
+
+    return { '1': whole[0], X: whole[1], '2': whole[2] };
+  }
+
+  if (previewMode) {
+    buildRows();
+    render(previewPoll());
+    window.addEventListener('resize', reportHeight);
+  } else if (!pollId) {
     showError('Ingen omröstning angiven.');
   } else {
     buildRows();

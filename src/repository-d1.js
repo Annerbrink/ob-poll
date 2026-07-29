@@ -18,23 +18,24 @@ function createD1Repository({ database }) {
   }
 
   return {
-    async createPoll({ homeTeam, awayTeam, kickoff = null, closesAt = null, createdBy = null }) {
+    async createPoll({ homeTeam, awayTeam, kickoff = null, closesAt = null, category = null, createdBy = null }) {
       const poll = {
         id: buildId(homeTeam, awayTeam),
         homeTeam,
         awayTeam,
         kickoff,
         closesAt,
+        category,
         createdBy,
         createdAt: new Date().toISOString()
       };
 
       await database
         .prepare(`
-          INSERT INTO polls (id, home_team, away_team, kickoff, closes_at, created_by, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO polls (id, home_team, away_team, kickoff, closes_at, category, created_by, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `)
-        .bind(poll.id, poll.homeTeam, poll.awayTeam, poll.kickoff, poll.closesAt, poll.createdBy, poll.createdAt)
+        .bind(poll.id, poll.homeTeam, poll.awayTeam, poll.kickoff, poll.closesAt, poll.category, poll.createdBy, poll.createdAt)
         .run();
 
       return { ...poll, counts: { 1: 0, X: 0, 2: 0 } };

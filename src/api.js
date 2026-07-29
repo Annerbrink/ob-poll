@@ -7,6 +7,9 @@ const MAX_TEAM_LENGTH = 60;
 const RESULT_CACHE_SECONDS = 15;
 const MAX_BODY_BYTES = 8192;
 
+/** A poll is either a men's or a women's fixture — or unspecified (null). */
+const CATEGORIES = ['herr', 'dam'];
+
 /**
  * The endpoints, written against the Web platform's Request and Response so the
  * same code runs behind node:http locally and as Pages Functions on Cloudflare.
@@ -49,6 +52,7 @@ function createApi({ repository, adminToken }) {
         kickoff,
         // Voting stops at kickoff unless the author says otherwise.
         closesAt: closesAt || kickoff,
+        category: cleanCategory(body.category),
         createdBy: cleanTeam(body.createdBy) || null
       });
 
@@ -158,6 +162,11 @@ async function readBody(request) {
 
 function cleanTeam(value) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+}
+
+/** Anything the author didn't pick from the two allowed values becomes null. */
+function cleanCategory(value) {
+  return CATEGORIES.includes(value) ? value : null;
 }
 
 /** Returns an ISO string, null when empty, or false when unparseable. */
