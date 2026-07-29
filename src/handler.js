@@ -27,6 +27,10 @@ function createHandler({ repository, adminToken, frameAncestors = null }) {
     if (single) {
       const id = decodeURIComponent(single[1]);
       if (method === 'GET') return api.showPoll(id);
+      if (method === 'PUT') {
+        const denied = api.requireAuthor(request);
+        return denied || api.updatePoll(request, id);
+      }
       if (method === 'DELETE') {
         const denied = api.requireAuthor(request);
         return denied || api.deletePoll(id);

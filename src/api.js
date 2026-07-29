@@ -28,31 +28,11 @@ function createApi({ repository, adminToken }) {
 
     async createPoll(request) {
       const body = await readBody(request);
-      if (!body) return json(400, { error: 'Ogiltig begäran' });
-
-      const homeTeam = cleanTeam(body.homeTeam);
-      const awayTeam = cleanTeam(body.awayTeam);
-
-      if (!homeTeam || !awayTeam) {
-        return json(400, { error: 'Båda lagnamnen måste fyllas i' });
-      }
-      if (homeTeam.length > MAX_TEAM_LENGTH || awayTeam.length > MAX_TEAM_LENGTH) {
-        return json(400, { error: `Lagnamn får vara högst ${MAX_TEAM_LENGTH} tecken` });
-      }
-
-      const kickoff = cleanTimestamp(body.kickoff);
-      if (kickoff === false) return json(400, { error: 'Avsparkstiden är inte ett giltigt datum' });
-
-      const closesAt = cleanTimestamp(body.closesAt);
-      if (closesAt === false) return json(400, { error: 'Stängningstiden är inte ett giltigt datum' });
+      const { error, fields } = readFixture(body);
+      if (error) return error;
 
       const poll = await repository.createPoll({
-        homeTeam,
-        awayTeam,
-        kickoff,
-        // Voting stops at kickoff unless the author says otherwise.
-        closesAt: closesAt || kickoff,
-        category: cleanCategory(body.category),
+        ...fields,
         createdBy: cleanTeam(body.createdBy) || null
       });
 
@@ -81,6 +61,16 @@ function createApi({ repository, adminToken }) {
       return json(200, { poll: present(poll, null) }, {
         'Cache-Control': `public, max-age=${RESULT_CACHE_SECONDS}, stale-while-revalidate=30`
       });
+    },
+
+    /** The author edits an existing poll; the id and its votes stay put. */
+    async updatePoll(request, id) {
+      if (!(await repository.getPoll(id))) return json(404, { error: 'Omröstningen finns inte' });
+
+      const { error, fields } = readFixture(await readBody(request));
+      if (error) return error;
+
+      return json(200, { poll: present(await repository.updatePoll(id, fields), null) });
     },
 
     async deletePoll(id) {
@@ -158,6 +148,40 @@ async function readBody(request) {
   } catch (error) {
     return null;
   }
+}
+
+/**
+ * Validates the fixture fields shared by create and update. Returns either
+ * `{ error }` with a ready 400 Response, or `{ fields }` with cleaned values.
+ */
+function readFixture(body) {
+  if (!body) return { error: json(400, { error: 'Ogiltig begäran' }) };
+
+  const homeTeam = cleanTeam(body.homeTeam);
+  const awayTeam = cleanTeam(body.awayTeam);
+  if (!homeTeam || !awayTeam) {
+    return { error: json(400, { error: 'Båda lagnamnen måste fyllas i' }) };
+  }
+  if (homeTeam.length > MAX_TEAM_LENGTH || awayTeam.length > MAX_TEAM_LENGTH) {
+    return { error: json(400, { error: `Lagnamn får vara högst ${MAX_TEAM_LENGTH} tecken` }) };
+  }
+
+  const kickoff = cleanTimestamp(body.kickoff);
+  if (kickoff === false) return { error: json(400, { error: 'Avsparkstiden är inte ett giltigt datum' }) };
+
+  const closesAt = cleanTimestamp(body.closesAt);
+  if (closesAt === false) return { error: json(400, { error: 'Stängningstiden är inte ett giltigt datum' }) };
+
+  return {
+    fields: {
+      homeTeam,
+      awayTeam,
+      kickoff,
+      // Voting stops at kickoff unless the author says otherwise.
+      closesAt: closesAt || kickoff,
+      category: cleanCategory(body.category)
+    }
+  };
 }
 
 function cleanTeam(value) {

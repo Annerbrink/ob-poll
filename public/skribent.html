@@ -127,12 +127,16 @@
 
   .poll-item {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
     padding: .875rem 0;
     border-top: 1px solid var(--color-surface-subtle);
   }
+
+  .edit-form { flex-basis: 100%; }
+  .edit-form .form-actions { margin-bottom: 0; }
 
   .poll-item:first-of-type { border-top: 0; }
 
@@ -251,21 +255,48 @@
   }
 
   // Match type is optional and can be cleared, so clicking the active button
-  // deselects it and leaves the poll without a category.
-  var categoryGroup = document.getElementById('category');
-  categoryGroup.addEventListener('click', function (event) {
-    var button = event.target.closest('button[data-category]');
-    if (!button) return;
-    var wasActive = button.getAttribute('aria-pressed') === 'true';
-    categoryGroup.querySelectorAll('button').forEach(function (other) {
-      other.setAttribute('aria-pressed', 'false');
+  // deselects it and leaves the poll without a category. The create form and
+  // each poll's inline editor share this behaviour.
+  function wireCategory(group) {
+    group.addEventListener('click', function (event) {
+      var button = event.target.closest('button[data-category]');
+      if (!button) return;
+      var wasActive = button.getAttribute('aria-pressed') === 'true';
+      group.querySelectorAll('button').forEach(function (other) {
+        other.setAttribute('aria-pressed', 'false');
+      });
+      button.setAttribute('aria-pressed', wasActive ? 'false' : 'true');
     });
-    button.setAttribute('aria-pressed', wasActive ? 'false' : 'true');
-  });
+  }
+
+  function categoryValue(group) {
+    var active = group.querySelector('button[aria-pressed="true"]');
+    return active ? active.dataset.category : null;
+  }
+
+  /** Builds a Herr/Dam control with `current` preselected, for the editors. */
+  function categoryControl(current) {
+    var group = document.createElement('div');
+    group.className = 'segmented';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Matchtyp');
+    [['herr', 'Herr'], ['dam', 'Dam']].forEach(function (pair) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.category = pair[0];
+      button.textContent = pair[1];
+      button.setAttribute('aria-pressed', current === pair[0] ? 'true' : 'false');
+      group.appendChild(button);
+    });
+    wireCategory(group);
+    return group;
+  }
+
+  var categoryGroup = document.getElementById('category');
+  wireCategory(categoryGroup);
 
   function selectedCategory() {
-    var active = categoryGroup.querySelector('button[aria-pressed="true"]');
-    return active ? active.dataset.category : null;
+    return categoryValue(categoryGroup);
   }
 
   function clearCategory() {
@@ -304,30 +335,49 @@
     document.getElementById('embed-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // Builds the same widget.html the reader gets, but in preview mode: it renders
-  // from these query params without hitting the API, so nothing is saved.
-  function previewUrl() {
+  // widget.html in preview mode renders from these query params without hitting
+  // the API, so nothing is ever saved — used both for the poll being created and
+  // for the existing polls in the list.
+  function previewQuery(fields) {
     var query = new URLSearchParams({ preview: '1' });
-    var home = document.getElementById('home').value.trim();
-    var away = document.getElementById('away').value.trim();
-    var category = selectedCategory();
-    var kickoff = OB_TIME.toIso(document.getElementById('kickoff').value);
-    var closes = OB_TIME.toIso(document.getElementById('closes').value);
-
-    if (home) query.set('home', home);
-    if (away) query.set('away', away);
-    if (category) query.set('category', category);
-    if (kickoff) query.set('kickoff', kickoff);
-    if (closes) query.set('closes', closes);
+    if (fields.home) query.set('home', fields.home);
+    if (fields.away) query.set('away', fields.away);
+    if (fields.category) query.set('category', fields.category);
+    if (fields.kickoff) query.set('kickoff', fields.kickoff);
+    if (fields.closes) query.set('closes', fields.closes);
     return 'widget.html?' + query.toString();
+  }
+
+  function previewUrl() {
+    return previewQuery({
+      home: document.getElementById('home').value.trim(),
+      away: document.getElementById('away').value.trim(),
+      category: selectedCategory(),
+      kickoff: OB_TIME.toIso(document.getElementById('kickoff').value),
+      closes: OB_TIME.toIso(document.getElementById('closes').value)
+    });
+  }
+
+  function previewUrlForPoll(poll) {
+    return previewQuery({
+      home: poll.homeTeam,
+      away: poll.awayTeam,
+      category: poll.category,
+      kickoff: poll.kickoff,
+      closes: poll.closesAt
+    });
   }
 
   var previewFrame = document.getElementById('preview-frame');
 
-  document.getElementById('preview').addEventListener('click', function () {
-    previewFrame.src = previewUrl();
+  function showPreview(url) {
+    previewFrame.src = url;
     document.getElementById('preview-panel').hidden = false;
     document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  document.getElementById('preview').addEventListener('click', function () {
+    showPreview(previewUrl());
   });
 
   // The preview iframe resizes itself the same way an embedded widget does.
@@ -378,6 +428,82 @@
     return OB_TIME.format(value, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) || null;
   }
 
+  /** An inline editor for one poll; the id and its votes are left untouched. */
+  function buildEditForm(poll, onSaved) {
+    var form = document.createElement('form');
+    form.className = 'edit-form';
+    form.hidden = true;
+
+    var grid = document.createElement('div');
+    grid.className = 'grid';
+
+    function field(labelText, control, full) {
+      var wrap = document.createElement('div');
+      if (full) wrap.className = 'full';
+      var label = document.createElement('label');
+      label.textContent = labelText;
+      wrap.append(label, control);
+      grid.appendChild(wrap);
+      return control;
+    }
+
+    var home = document.createElement('input');
+    home.maxLength = 60; home.required = true; home.value = poll.homeTeam;
+    field('Hemmalag', home);
+
+    var away = document.createElement('input');
+    away.maxLength = 60; away.required = true; away.value = poll.awayTeam;
+    field('Bortalag', away);
+
+    var category = field('Matchtyp', categoryControl(poll.category), true);
+
+    var kickoff = document.createElement('input');
+    kickoff.type = 'datetime-local'; kickoff.value = OB_TIME.toInput(poll.kickoff);
+    field('Avspark', kickoff);
+
+    var closes = document.createElement('input');
+    closes.type = 'datetime-local'; closes.value = OB_TIME.toInput(poll.closesAt);
+    field('Stänger', closes);
+
+    var save = document.createElement('button');
+    save.className = 'primary'; save.type = 'submit'; save.textContent = 'Spara';
+
+    var cancel = document.createElement('button');
+    cancel.className = 'secondary'; cancel.type = 'button'; cancel.textContent = 'Avbryt';
+    cancel.addEventListener('click', function () { form.hidden = true; });
+
+    var formActions = document.createElement('div');
+    formActions.className = 'form-actions';
+    formActions.append(save, cancel);
+
+    var errorText = document.createElement('p');
+    errorText.className = 'notice error';
+    errorText.hidden = true;
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      errorText.hidden = true;
+      api('/api/polls/' + encodeURIComponent(poll.id), {
+        method: 'PUT',
+        body: JSON.stringify({
+          homeTeam: home.value,
+          awayTeam: away.value,
+          category: categoryValue(category),
+          kickoff: OB_TIME.toIso(kickoff.value),
+          closesAt: OB_TIME.toIso(closes.value)
+        })
+      })
+        .then(onSaved)
+        .catch(function (error) {
+          errorText.textContent = error.message;
+          errorText.hidden = false;
+        });
+    });
+
+    form.append(grid, formActions, errorText);
+    return form;
+  }
+
   function loadPolls() {
     if (!tokenInput.value.trim()) return;
 
@@ -408,6 +534,20 @@
           var actions = document.createElement('div');
           actions.className = 'poll-actions';
 
+          var editForm = buildEditForm(poll, loadPolls);
+
+          var preview = document.createElement('button');
+          preview.type = 'button';
+          preview.className = 'link';
+          preview.textContent = 'Förhandsvisa';
+          preview.addEventListener('click', function () { showPreview(previewUrlForPoll(poll)); });
+
+          var edit = document.createElement('button');
+          edit.type = 'button';
+          edit.className = 'link';
+          edit.textContent = 'Redigera';
+          edit.addEventListener('click', function () { editForm.hidden = !editForm.hidden; });
+
           var embed = document.createElement('button');
           embed.type = 'button';
           embed.className = 'link';
@@ -423,8 +563,8 @@
             api('/api/polls/' + encodeURIComponent(poll.id), { method: 'DELETE' }).then(loadPolls);
           });
 
-          actions.append(embed, remove);
-          item.append(info, actions);
+          actions.append(preview, edit, embed, remove);
+          item.append(info, actions, editForm);
           listEl.appendChild(item);
         });
       })
