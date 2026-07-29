@@ -24,7 +24,6 @@
     status: document.getElementById('status'),
     choices: document.getElementById('choices'),
     tally: document.getElementById('tally'),
-    summary: document.getElementById('summary'),
     thanks: document.getElementById('thanks'),
     error: document.getElementById('error')
   };
@@ -240,16 +239,6 @@
     el.tally.textContent = 'Totalt ' + poll.total.toLocaleString('sv-SE') +
       (poll.total === 1 ? ' röst' : ' röster');
     el.tally.hidden = poll.total === 0;
-
-    if (poll.closed) {
-      el.summary.textContent = leadChoice ? 'Flest tippade ' + labels[leadChoice] : 'Omröstningen är stängd';
-    } else if (mine) {
-      el.summary.textContent = 'Du tippade ' + labels[mine];
-    } else {
-      el.summary.textContent = poll.total === 0
-        ? 'Inga röster än – tippa 1, X eller 2'
-        : 'Tippa 1, X eller 2';
-    }
 
     el.loading.hidden = true;
     el.content.hidden = false;

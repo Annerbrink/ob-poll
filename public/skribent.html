@@ -309,7 +309,6 @@
   }
 
   .status-badge.open { background: var(--color-theme-tertiary); color: var(--color-theme-secondary); }
-  .status-badge.upcoming { background: #fff4d6; color: #8a6100; }
   .status-badge.closed { background: var(--color-surface-subtle); color: var(--color-text-secondary); }
 
   .toast {
@@ -327,7 +326,6 @@
   }
 
   @media (prefers-color-scheme: dark) {
-    .status-badge.upcoming { background: #3a2f12; color: #f0c14b; }
     .list-controls select {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e4e8ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     }
@@ -374,8 +372,8 @@
         </div>
       </div>
       <div>
-        <label for="kickoff">Avspark <span class="hint">(valfritt)</span></label>
-        <input id="kickoff" type="datetime-local">
+        <label for="kickoff">Avspark</label>
+        <input id="kickoff" type="datetime-local" required>
       </div>
       <div>
         <label for="closes">Stänger <span class="hint">(valfritt, annars vid avspark)</span></label>
@@ -395,7 +393,6 @@
       <input id="search" type="search" placeholder="Sök lag …" autocomplete="off">
       <select id="status-filter" aria-label="Filtrera på status">
         <option value="all">Alla</option>
-        <option value="upcoming">Kommande</option>
         <option value="open">Öppna</option>
         <option value="closed">Stängda</option>
       </select>
@@ -627,6 +624,11 @@
 
     var kickoffIso = OB_TIME.toIso(document.getElementById('kickoff').value);
     var closesIso = OB_TIME.toIso(document.getElementById('closes').value);
+    if (!kickoffIso) {
+      formError.textContent = 'Avspark måste anges';
+      formError.hidden = false;
+      return;
+    }
     if (!timesValid(kickoffIso, closesIso)) {
       formError.textContent = 'Stängningstiden kan inte vara före avspark';
       formError.hidden = false;
@@ -669,11 +671,11 @@
     return !(kickoffIso && closesIso && new Date(closesIso) < new Date(kickoffIso));
   }
 
-  /** Kommande = matchen har inte startat, Öppen = pågår, Stängd = röstning stängd. */
+  /** Två lägen: Öppen = går att rösta på, Stängd = röstningen har stängt. */
   function pollStatus(poll) {
-    if (poll.closed) return { key: 'closed', label: 'Stängd' };
-    if (poll.kickoff && new Date(poll.kickoff) > new Date()) return { key: 'upcoming', label: 'Kommande' };
-    return { key: 'open', label: 'Öppen' };
+    return poll.closed
+      ? { key: 'closed', label: 'Stängd' }
+      : { key: 'open', label: 'Öppen' };
   }
 
   function fillCategory(value) {
@@ -769,7 +771,7 @@
     var category = field('Matchtyp', categoryControl(poll.category), true);
 
     var kickoff = document.createElement('input');
-    kickoff.type = 'datetime-local'; kickoff.value = OB_TIME.toInput(poll.kickoff);
+    kickoff.type = 'datetime-local'; kickoff.required = true; kickoff.value = OB_TIME.toInput(poll.kickoff);
     field('Avspark', kickoff);
 
     var closes = document.createElement('input');
@@ -797,6 +799,11 @@
 
       var kickoffIso = OB_TIME.toIso(kickoff.value);
       var closesIso = OB_TIME.toIso(closes.value);
+      if (!kickoffIso) {
+        errorText.textContent = 'Avspark måste anges';
+        errorText.hidden = false;
+        return;
+      }
       if (!timesValid(kickoffIso, closesIso)) {
         errorText.textContent = 'Stängningstiden kan inte vara före avspark';
         errorText.hidden = false;

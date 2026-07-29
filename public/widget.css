@@ -118,8 +118,6 @@ h1 {
 
 .meta { margin: 0; font-size: .8125rem; color: var(--color-text-secondary); }
 
-.status { margin-top: .25rem; font-weight: 600; }
-
 .ask {
   display: flex;
   justify-content: space-between;
@@ -205,7 +203,6 @@ footer {
 }
 
 footer p { margin: 0; }
-#summary { font-weight: 600; color: var(--color-text); }
 
 .error { color: #d73c3c; font-weight: 600; }
 
