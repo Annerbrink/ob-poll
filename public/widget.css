@@ -115,7 +115,23 @@ h1 {
 
 .status { margin-top: .25rem; font-weight: 600; }
 
-.question { margin: 1.25rem 0 .75rem; font-size: 1.0625rem; font-weight: 700; letter-spacing: -.01em; }
+.ask {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .75rem;
+  margin: 1.25rem 0 .75rem;
+}
+
+.question { margin: 0; font-size: 1.0625rem; font-weight: 700; letter-spacing: -.01em; }
+
+.tally {
+  margin: 0;
+  font-size: .75rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
 
@@ -126,7 +142,7 @@ h1 {
   gap: .1875rem;
   padding: .875rem .375rem;
   border: 1px solid var(--color-surface-moderate);
-  border-radius: var(--radius-button);
+  border-radius: .5rem;
   background: var(--color-surface-page);
   color: inherit;
   font: inherit;
@@ -216,12 +232,6 @@ footer {
 
 footer p { margin: 0; }
 #summary { font-weight: 600; color: var(--color-text); }
-
-.total {
-  margin-top: .125rem;
-  font-size: .6875rem;
-  color: var(--color-text-secondary);
-}
 
 .error { color: #d73c3c; font-weight: 600; }
 

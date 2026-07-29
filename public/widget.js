@@ -24,8 +24,8 @@
     status: document.getElementById('status'),
     choices: document.getElementById('choices'),
     results: document.getElementById('results'),
+    tally: document.getElementById('tally'),
     summary: document.getElementById('summary'),
-    total: document.getElementById('total'),
     thanks: document.getElementById('thanks'),
     error: document.getElementById('error')
   };
@@ -256,9 +256,10 @@
       button.disabled = poll.closed;
     });
 
-    var count = poll.total + (poll.total === 1 ? ' röst' : ' röster');
-    el.total.textContent = 'Totalt ' + count;
-    el.total.hidden = poll.total === 0;
+    // Total sits by the question, the way match apps show "Total votes".
+    el.tally.textContent = 'Totalt ' + poll.total.toLocaleString('sv-SE') +
+      (poll.total === 1 ? ' röst' : ' röster');
+    el.tally.hidden = poll.total === 0;
 
     if (poll.closed) {
       el.summary.textContent = leadChoice ? 'Flest tippade ' + labels[leadChoice] : 'Omröstningen är stängd';

@@ -26,7 +26,10 @@
     <p class="meta" id="kickoff"></p>
     <p class="meta status" id="status"></p>
 
-    <p class="question">Vem vinner?</p>
+    <div class="ask">
+      <p class="question">Vem vinner?</p>
+      <p class="tally" id="tally" hidden></p>
+    </div>
 
     <div class="choices" id="choices">
       <button class="choice" type="button" data-choice="1" aria-pressed="false">
@@ -46,7 +49,6 @@
 
     <footer>
       <p id="summary"></p>
-      <p class="total" id="total" hidden></p>
       <p class="thanks" id="thanks" hidden>Tack för din röst!</p>
       <p class="error" id="error" hidden></p>
     </footer>
