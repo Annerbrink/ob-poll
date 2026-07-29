@@ -193,10 +193,7 @@ h1 {
 }
 
 .row-head .name { font-weight: 600; }
-
-.figures { display: flex; align-items: baseline; gap: .5rem; flex-shrink: 0; }
-.figures .count { font-size: .75rem; color: var(--color-text-secondary); }
-.figures .pct { font-variant-numeric: tabular-nums; font-weight: 700; }
+.row-head .count { font-size: .75rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
 .track {
   height: .5rem;
@@ -219,8 +216,7 @@ h1 {
   background: linear-gradient(90deg, var(--color-theme-secondary), var(--color-theme-primary));
 }
 
-.row.mine .row-head .name,
-.row.mine .row-head .pct { color: var(--color-theme-secondary); }
+.row.mine .row-head .name { color: var(--color-theme-secondary); }
 
 footer {
   margin-top: 1.25rem;

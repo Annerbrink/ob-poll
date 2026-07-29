@@ -162,8 +162,7 @@
       var row = document.createElement('div');
       row.className = 'row';
       row.innerHTML =
-        '<div class="row-head"><span class="name"></span>' +
-          '<span class="figures"><span class="count"></span><span class="pct">0 %</span></span></div>' +
+        '<div class="row-head"><span class="name"></span><span class="count"></span></div>' +
         '<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div></div>';
       el.results.appendChild(row);
       rows[choice] = row;
@@ -239,7 +238,6 @@
       row.classList.toggle('mine', mine === choice);
       row.classList.toggle('winner', leadChoice === choice);
       row.querySelector('.name').textContent = choice + ' · ' + labels[choice];
-      row.querySelector('.pct').textContent = percent + ' %';
       row.querySelector('.fill').style.width = percent + '%';
       row.querySelector('.count').textContent = count + (count === 1 ? ' röst' : ' röster');
 
