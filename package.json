@@ -1,0 +1,19 @@
+{
+  "name": "ob-poll",
+  "version": "1.0.0",
+  "description": "Embeddable 1 X 2 football match poll with server-side result storage",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:41729/git/Annerbrink/ob-poll"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^13.0.2",
+    "express": "^5.2.1"
+  }
+}

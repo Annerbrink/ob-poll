@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skapa 1 X 2-omröstning</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="widget.css">
+<style>
+  body { padding: 2rem 1.25rem; }
+
+  .page { max-width: 720px; margin: 0 auto; }
+
+  h1.page-title {
+    font-size: 1.8125rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    margin: 0 0 .25rem;
+  }
+
+  .lead { margin: 0 0 1.75rem; color: var(--color-text-secondary); font-size: .875rem; }
+
+  form, .panel {
+    background: var(--color-surface-page);
+    border: 1px solid var(--color-surface-moderate);
+    border-radius: var(--radius-surface);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .875rem; }
+
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+
+  label {
+    display: block;
+    font-size: .75rem;
+    font-weight: 700;
+    margin-bottom: .3125rem;
+  }
+
+  .hint { font-weight: 400; color: var(--color-text-secondary); }
+
+  input {
+    width: 100%;
+    padding: .5625rem .625rem;
+    border: 1px solid var(--color-surface-moderate);
+    border-radius: var(--radius-button);
+    background: var(--color-surface-page);
+    color: var(--color-text);
+    font: inherit;
+  }
+
+  input:focus-visible { outline: 2px solid var(--color-theme-primary); outline-offset: 1px; }
+
+  button.primary {
+    margin-top: 1.125rem;
+    padding: .625rem 1.25rem;
+    border: 0;
+    border-radius: var(--radius-button-themed);
+    background: var(--color-theme-primary);
+    color: var(--color-button-primary-foreground);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  button.primary:hover { background: var(--color-theme-secondary); }
+  button.primary:disabled { opacity: .6; cursor: not-allowed; }
+
+  h2 { font-size: 1rem; margin: 0 0 .75rem; }
+
+  textarea {
+    width: 100%;
+    min-height: 6rem;
+    padding: .625rem;
+    border: 1px solid var(--color-surface-moderate);
+    border-radius: var(--radius-button);
+    background: var(--color-surface-minimal);
+    color: var(--color-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .75rem;
+    resize: vertical;
+  }
+
+  .poll-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: .875rem 0;
+    border-top: 1px solid var(--color-surface-subtle);
+  }
+
+  .poll-item:first-of-type { border-top: 0; }
+
+  .poll-item h3 { margin: 0 0 .1875rem; font-size: .9375rem; }
+
+  .poll-item p { margin: 0; font-size: .75rem; color: var(--color-text-secondary); }
+
+  .poll-actions { display: flex; gap: .625rem; flex-shrink: 0; }
+
+  .link {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--color-theme-primary);
+    font: inherit;
+    font-size: .75rem;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .notice { font-size: .8125rem; margin: .75rem 0 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1 class="page-title">1 X 2-omröstning</h1>
+  <p class="lead">Fyll i lagen, skapa omröstningen och klistra in inbäddningskoden i artikeln.</p>
+
+  <div class="panel">
+    <h2>Skribenttoken</h2>
+    <label for="token">Token <span class="hint">(sparas lokalt i den här webbläsaren)</span></label>
+    <input id="token" type="password" autocomplete="off" placeholder="ADMIN_TOKEN">
+  </div>
+
+  <form id="create-form">
+    <h2>Ny omröstning</h2>
+    <div class="grid">
+      <div>
+        <label for="home">Hemmalag <span class="hint">(1)</span></label>
+        <input id="home" required maxlength="60" placeholder="Örgryte IS">
+      </div>
+      <div>
+        <label for="away">Bortalag <span class="hint">(2)</span></label>
+        <input id="away" required maxlength="60" placeholder="IFK Göteborg">
+      </div>
+      <div>
+        <label for="kickoff">Avspark <span class="hint">(valfritt)</span></label>
+        <input id="kickoff" type="datetime-local">
+      </div>
+      <div>
+        <label for="closes">Stänger <span class="hint">(valfritt, annars vid avspark)</span></label>
+        <input id="closes" type="datetime-local">
+      </div>
+    </div>
+    <button class="primary" type="submit">Skapa omröstning</button>
+    <p class="notice error" id="form-error" hidden></p>
+  </form>
+
+  <div class="panel" id="embed-panel" hidden>
+    <h2>Inbäddningskod</h2>
+    <p class="lead" style="margin-bottom:12px">Klistra in i artikelns HTML-block. Höjden anpassas automatiskt.</p>
+    <textarea id="embed-code" readonly></textarea>
+    <button class="primary" type="button" id="copy">Kopiera</button>
+  </div>
+
+  <div class="panel">
+    <h2>Omröstningar</h2>
+    <div id="poll-list"><p class="lead" style="margin:0">Ange token för att se dina omröstningar.</p></div>
+  </div>
+
+</div>
+
+<script src="time.js"></script>
+<script>
+(function () {
+  var tokenInput = document.getElementById('token');
+  var listEl = document.getElementById('poll-list');
+  var formError = document.getElementById('form-error');
+
+  tokenInput.value = localStorage.getItem('adminToken') || '';
+  tokenInput.addEventListener('change', function () {
+    localStorage.setItem('adminToken', tokenInput.value.trim());
+    loadPolls();
+  });
+
+  function api(path, options) {
+    var settings = options || {};
+    settings.headers = Object.assign(
+      { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tokenInput.value.trim() },
+      settings.headers || {}
+    );
+    return fetch(path, settings).then(function (response) {
+      if (response.status === 204) return null;
+      return response.json().then(function (body) {
+        if (!response.ok) throw new Error(body.error || 'Något gick fel');
+        return body;
+      });
+    });
+  }
+
+  function embedCode(poll) {
+    var src = location.origin + '/widget.html?poll=' + poll.id;
+    var title = (poll.homeTeam + ' – ' + poll.awayTeam).replace(/"/g, '&quot;');
+
+    // The script matches the iframe by its content window, so several polls can
+    // sit in the same article without interfering with each other.
+    return [
+      '<iframe src="' + src + '"',
+      '        title="1 X 2: ' + title + '"',
+      '        style="width:100%;max-width:520px;height:500px;border:0"',
+      '        loading="lazy"></iframe>',
+      '<' + 'script>',
+      'window.addEventListener("message", function (event) {',
+      '  if (!event.data || event.data.type !== "ob-poll:height") return;',
+      '  document.querySelectorAll("iframe").forEach(function (frame) {',
+      '    if (frame.contentWindow === event.source) {',
+      '      frame.style.height = event.data.height + "px";',
+      '    }',
+      '  });',
+      '});',
+      '<' + '/script>'
+    ].join('\n');
+  }
+
+  function showEmbed(poll) {
+    document.getElementById('embed-code').value = embedCode(poll);
+    document.getElementById('embed-panel').hidden = false;
+    document.getElementById('embed-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  document.getElementById('copy').addEventListener('click', function () {
+    var field = document.getElementById('embed-code');
+    field.select();
+    navigator.clipboard.writeText(field.value);
+    this.textContent = 'Kopierat!';
+    var button = this;
+    setTimeout(function () { button.textContent = 'Kopiera'; }, 1500);
+  });
+
+  document.getElementById('create-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    formError.hidden = true;
+
+    api('/api/polls', {
+      method: 'POST',
+      body: JSON.stringify({
+        homeTeam: document.getElementById('home').value,
+        awayTeam: document.getElementById('away').value,
+        kickoff: OB_TIME.toIso(document.getElementById('kickoff').value),
+        closesAt: OB_TIME.toIso(document.getElementById('closes').value)
+      })
+    })
+      .then(function (body) {
+        event.target.reset();
+        showEmbed(body.poll);
+        loadPolls();
+      })
+      .catch(function (error) {
+        formError.textContent = error.message;
+        formError.hidden = false;
+      });
+  });
+
+  function formatDate(value) {
+    return OB_TIME.format(value, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) || null;
+  }
+
+  function loadPolls() {
+    if (!tokenInput.value.trim()) return;
+
+    api('/api/polls')
+      .then(function (body) {
+        if (!body.polls.length) {
+          listEl.innerHTML = '<p class="lead" style="margin:0">Inga omröstningar än.</p>';
+          return;
+        }
+
+        listEl.textContent = '';
+        body.polls.forEach(function (poll) {
+          var item = document.createElement('div');
+          item.className = 'poll-item';
+
+          var kickoff = formatDate(poll.kickoff);
+          var stats = '1: ' + poll.percentages['1'] + ' % · X: ' + poll.percentages.X +
+            ' % · 2: ' + poll.percentages['2'] + ' % · ' + poll.total +
+            (poll.total === 1 ? ' röst' : ' röster') + (poll.closed ? ' · stängd' : '');
+
+          var info = document.createElement('div');
+          var title = document.createElement('h3');
+          title.textContent = poll.homeTeam + ' – ' + poll.awayTeam;
+          var meta = document.createElement('p');
+          meta.textContent = (kickoff ? 'Avspark ' + kickoff + ' · ' : '') + stats;
+          info.append(title, meta);
+
+          var actions = document.createElement('div');
+          actions.className = 'poll-actions';
+
+          var embed = document.createElement('button');
+          embed.type = 'button';
+          embed.className = 'link';
+          embed.textContent = 'Inbäddningskod';
+          embed.addEventListener('click', function () { showEmbed(poll); });
+
+          var remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'link';
+          remove.textContent = 'Ta bort';
+          remove.addEventListener('click', function () {
+            if (!confirm('Ta bort omröstningen och alla röster?')) return;
+            api('/api/polls/' + encodeURIComponent(poll.id), { method: 'DELETE' }).then(loadPolls);
+          });
+
+          actions.append(embed, remove);
+          item.append(info, actions);
+          listEl.appendChild(item);
+        });
+      })
+      .catch(function (error) {
+        listEl.innerHTML = '';
+        var message = document.createElement('p');
+        message.className = 'lead error';
+        message.style.margin = '0';
+        message.textContent = error.message;
+        listEl.appendChild(message);
+      });
+  }
+
+  loadPolls();
+})();
+</script>
+</body>
+</html>
