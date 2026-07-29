@@ -160,6 +160,23 @@ test('results survive a restart because they live in the data layer', async () =
   }
 });
 
+test('a reader can retract their vote while the poll is open', () => withApi(async ({ call, author }) => {
+  const { body } = await author('/api/polls', {
+    method: 'POST',
+    body: JSON.stringify({ homeTeam: 'AIK', awayTeam: 'Djurgården' })
+  });
+  const id = body.poll.id;
+  const voter = { 'X-Voter-Id': 'a'.repeat(32) };
+
+  await call(`/api/polls/${id}/votes`, { method: 'POST', body: JSON.stringify({ choice: '1' }), headers: voter });
+  const retracted = await call(`/api/polls/${id}/votes`, { method: 'DELETE', headers: voter });
+
+  assert.strictEqual(retracted.status, 200);
+  assert.strictEqual(retracted.body.poll.total, 0);
+  assert.strictEqual(retracted.body.poll.yourVote, null);
+  assert.deepStrictEqual(retracted.body.poll.counts, { 1: 0, X: 0, 2: 0 });
+}));
+
 test('voting is rejected once the poll has closed', () => withApi(async ({ call, author }) => {
   const { body } = await author('/api/polls', {
     method: 'POST',

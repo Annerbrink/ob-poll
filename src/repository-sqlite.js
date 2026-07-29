@@ -50,6 +50,7 @@ function createSqliteRepository({ file = path.join(__dirname, '..', 'data', 'pol
       DO UPDATE SET choice = excluded.choice, updated_at = excluded.updated_at
     `),
     selectVote: db.prepare('SELECT choice FROM votes WHERE poll_id = ? AND voter_id = ?'),
+    deleteVote: db.prepare('DELETE FROM votes WHERE poll_id = ? AND voter_id = ?'),
     countVotes: db.prepare('SELECT choice, COUNT(*) AS n FROM votes WHERE poll_id = ? GROUP BY choice'),
     adjustCount: {}
   };
@@ -72,6 +73,15 @@ function createSqliteRepository({ file = path.join(__dirname, '..', 'data', 'pol
     statements.upsertVote.run({ pollId, voterId, choice, now });
     if (previous) statements.adjustCount[previous.choice].run(-1, pollId);
     statements.adjustCount[choice].run(1, pollId);
+  });
+
+  const removeVote = db.transaction(({ pollId, voterId }) => {
+    const previous = statements.selectVote.get(pollId, voterId);
+    if (!previous) return false;
+
+    statements.deleteVote.run(pollId, voterId);
+    statements.adjustCount[previous.choice].run(-1, pollId);
+    return true;
   });
 
   return {
@@ -112,6 +122,11 @@ function createSqliteRepository({ file = path.join(__dirname, '..', 'data', 'pol
     /** Casting again with a different sign moves the reader's vote rather than adding one. */
     async castVote({ pollId, voterId, choice }) {
       castVote({ pollId, voterId, choice, now: new Date().toISOString() });
+    },
+
+    /** Removes the reader's vote and decrements the tally; false if they had none. */
+    async removeVote({ pollId, voterId }) {
+      return removeVote({ pollId, voterId });
     },
 
     async getVote({ pollId, voterId }) {
