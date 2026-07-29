@@ -9,7 +9,28 @@
 <style>
   body { padding: 2rem 1.25rem; }
 
-  .page { max-width: 720px; margin: 0 auto; }
+  .page { max-width: 1120px; margin: 0 auto; }
+
+  /* Left: token, skapa-formulär och listan. Höger: förhandsvisning + kod, kvar i vy. */
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 1.5rem; align-items: start; }
+
+  .col-side { position: sticky; top: 1.25rem; }
+
+  .side-hint {
+    margin: 0;
+    padding: 1rem 1.25rem;
+    border: 1px dashed var(--color-surface-moderate);
+    border-radius: var(--radius-surface);
+    color: var(--color-text-secondary);
+    font-size: .8125rem;
+  }
+
+  .col-side .panel:last-child { margin-bottom: 0; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .col-side { position: static; }
+  }
 
   h1.page-title {
     font-size: 1.8125rem;
@@ -216,6 +237,9 @@
   <h1 class="page-title">1 X 2-omröstning</h1>
   <p class="lead">Fyll i lagen, skapa omröstningen och klistra in inbäddningskoden i artikeln.</p>
 
+  <div class="layout">
+   <div class="col-main">
+
   <div class="panel">
     <h2>Skribenttoken</h2>
     <label for="token">Token <span class="hint">(sparas lokalt i den här webbläsaren)</span></label>
@@ -256,19 +280,6 @@
     <p class="notice error" id="form-error" hidden></p>
   </form>
 
-  <div class="panel" id="preview-panel" hidden>
-    <h2>Förhandsvisning</h2>
-    <p class="lead" style="margin-bottom:12px">Så här ser widgeten ut. Klicka på ett alternativ för att testa – inga röster sparas.</p>
-    <iframe id="preview-frame" title="Förhandsvisning" loading="lazy"></iframe>
-  </div>
-
-  <div class="panel" id="embed-panel" hidden>
-    <h2>Inbäddningskod</h2>
-    <p class="lead" style="margin-bottom:12px">Klistra in i artikelns HTML-block. Höjden anpassas automatiskt.</p>
-    <textarea id="embed-code" readonly></textarea>
-    <button class="primary" type="button" id="copy">Kopiera</button>
-  </div>
-
   <div class="panel">
     <h2>Omröstningar</h2>
     <div class="list-controls" id="list-controls" hidden>
@@ -281,6 +292,27 @@
       </select>
     </div>
     <div id="poll-list"><p class="lead" style="margin:0">Ange token för att se dina omröstningar.</p></div>
+  </div>
+
+   </div>
+
+   <aside class="col-side">
+     <p class="side-hint" id="side-hint">Förhandsvisning och inbäddningskod visas här när du skapar eller väljer en omröstning.</p>
+
+     <div class="panel" id="preview-panel" hidden>
+       <h2>Förhandsvisning</h2>
+       <p class="lead" style="margin-bottom:12px">Så här ser widgeten ut. Klicka på ett alternativ för att testa – inga röster sparas.</p>
+       <iframe id="preview-frame" title="Förhandsvisning" loading="lazy"></iframe>
+     </div>
+
+     <div class="panel" id="embed-panel" hidden>
+       <h2>Inbäddningskod</h2>
+       <p class="lead" style="margin-bottom:12px">Klistra in i artikelns HTML-block. Höjden anpassas automatiskt.</p>
+       <textarea id="embed-code" readonly></textarea>
+       <button class="primary" type="button" id="copy">Kopiera</button>
+     </div>
+   </aside>
+
   </div>
 
 </div>
@@ -393,6 +425,7 @@
   function showEmbed(poll) {
     document.getElementById('embed-code').value = embedCode(poll);
     document.getElementById('embed-panel').hidden = false;
+    document.getElementById('side-hint').hidden = true;
     document.getElementById('embed-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -434,6 +467,7 @@
   function showPreview(url) {
     previewFrame.src = url;
     document.getElementById('preview-panel').hidden = false;
+    document.getElementById('side-hint').hidden = true;
     document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
