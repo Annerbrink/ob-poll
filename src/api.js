@@ -119,6 +119,22 @@ function createApi({ repository, adminToken, turnstileSiteKey = '', turnstileSec
       });
     },
 
+    /** Lets a reader take back their vote while the poll is still open. */
+    async retractVote(request, id) {
+      const poll = await repository.getPoll(id);
+      if (!poll) return json(404, { error: 'Omröstningen finns inte' });
+      if (isClosed(poll)) {
+        return json(409, { error: 'Omröstningen är stängd för den här matchen' });
+      }
+
+      const voterId = resolveVoterId(request);
+      await repository.removeVote({ pollId: poll.id, voterId });
+
+      return json(200, { voterId, poll: present(await repository.getPoll(poll.id), null) }, {
+        'Set-Cookie': `voterId=${voterId}; Path=/; Max-Age=31536000; SameSite=None; Secure`
+      });
+    },
+
     methodNotAllowed() {
       return json(405, { error: 'Metoden stöds inte' });
     },

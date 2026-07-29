@@ -66,6 +66,13 @@
     return stored('vote:' + pollId, choice);
   }
 
+  function forgetVote() {
+    try {
+      localStorage.removeItem('vote:' + pollId);
+      localStorage.removeItem('voted-at:' + pollId);
+    } catch (e) {}
+  }
+
   /**
    * Results are cached for a few seconds, which is fine for everyone else's votes
    * but not for the reader's own: a cached snapshot from just before they voted
@@ -85,7 +92,7 @@
     settings.headers = settings.headers || {};
     settings.headers['Content-Type'] = 'application/json';
 
-    if (settings.method === 'POST') {
+    if (settings.method === 'POST' || settings.method === 'DELETE') {
       settings.headers['X-Voter-Id'] = voterId();
       settings.credentials = 'include';
     }
@@ -240,8 +247,11 @@
       track.setAttribute('aria-valuetext', labels[choice] + ': ' + percent + ' %');
 
       var button = el.choices.querySelector('.choice[data-choice="' + choice + '"]');
-      button.setAttribute('aria-pressed', mine === choice ? 'true' : 'false');
-      button.setAttribute('aria-label', 'Rösta på ' + labels[choice]);
+      var isMine = mine === choice;
+      button.setAttribute('aria-pressed', isMine ? 'true' : 'false');
+      button.setAttribute('aria-label', isMine ? 'Ta bort din röst på ' + labels[choice] : 'Rösta på ' + labels[choice]);
+      if (isMine && !poll.closed) button.title = 'Tryck igen för att ta bort din röst';
+      else button.removeAttribute('title');
       button.disabled = poll.closed;
     });
 
@@ -291,6 +301,18 @@
     }
 
     var choice = button.dataset.choice;
+
+    // Clicking the sign you already picked takes the vote back.
+    if (button.getAttribute('aria-pressed') === 'true') {
+      request('/api/polls/' + encodeURIComponent(pollId) + '/votes', { method: 'DELETE' })
+        .then(function (body) {
+          forgetVote();
+          render(body.poll);
+        })
+        .catch(function (error) { showError(error.message); });
+      return;
+    }
+
     turnstileToken()
       .then(function (token) {
         var payload = { choice: choice };
@@ -356,15 +378,20 @@
   /** Moves the preview's vote and re-tallies it locally, no request involved. */
   function simulateVote(choice) {
     var poll = previewPoll();
-    if (poll.yourVote === choice) return;
 
-    if (poll.yourVote) poll.counts[poll.yourVote] -= 1;
-    poll.counts[choice] += 1;
-    poll.yourVote = choice;
+    if (poll.yourVote === choice) {
+      poll.counts[choice] -= 1;
+      poll.yourVote = null;
+    } else {
+      if (poll.yourVote) poll.counts[poll.yourVote] -= 1;
+      poll.counts[choice] += 1;
+      poll.yourVote = choice;
+    }
+
     poll.total = CHOICES.reduce(function (sum, key) { return sum + poll.counts[key]; }, 0);
     poll.percentages = previewPercentages(poll.counts);
     render(poll);
-    flashThanks();
+    if (poll.yourVote) flashThanks();
   }
 
   /** The same largest-remainder rounding the server uses, for the preview only. */

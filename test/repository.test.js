@@ -37,6 +37,20 @@ for (const [name, create] of implementations) {
     assert.strictEqual(await repository.getVote({ pollId: poll.id, voterId: 'z'.repeat(32) }), null);
   });
 
+  test(`${name}: a reader can take back their vote`, async () => {
+    const repository = create();
+    const poll = await repository.createPoll({ homeTeam: 'AIK', awayTeam: 'Djurgården' });
+    const voter = 'a'.repeat(32);
+
+    await repository.castVote({ pollId: poll.id, voterId: voter, choice: '1' });
+    assert.deepStrictEqual((await repository.getPoll(poll.id)).counts, { 1: 1, X: 0, 2: 0 });
+
+    assert.strictEqual(await repository.removeVote({ pollId: poll.id, voterId: voter }), true);
+    assert.deepStrictEqual((await repository.getPoll(poll.id)).counts, { 1: 0, X: 0, 2: 0 });
+    assert.strictEqual(await repository.getVote({ pollId: poll.id, voterId: voter }), null);
+    assert.strictEqual(await repository.removeVote({ pollId: poll.id, voterId: voter }), false);
+  });
+
   test(`${name}: the stored tally matches a recount however the votes move`, async () => {
     const repository = create();
     const poll = await repository.createPoll({ homeTeam: 'Mörbylånga GoIF', awayTeam: 'GAIS' });

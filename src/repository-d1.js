@@ -109,6 +109,18 @@ function createD1Repository({ database }) {
       return row ? row.choice : null;
     },
 
+    /** Removes the reader's vote and decrements the tally; false if they had none. */
+    async removeVote({ pollId, voterId }) {
+      const previous = await this.getVote({ pollId, voterId });
+      if (!previous) return false;
+
+      await database.batch([
+        database.prepare('DELETE FROM votes WHERE poll_id = ? AND voter_id = ?').bind(pollId, voterId),
+        database.prepare(adjustCount[previous]).bind(-1, pollId)
+      ]);
+      return true;
+    },
+
     /** Counts rebuilt from the votes themselves — for repair, not for serving. */
     async recount(pollId) {
       const { results } = await database

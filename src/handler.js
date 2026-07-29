@@ -44,8 +44,10 @@ function createHandler({ repository, adminToken, frameAncestors = null, turnstil
 
     const votes = pathname.match(/^\/api\/polls\/([^/]+)\/votes$/);
     if (votes) {
-      if (method !== 'POST') return api.methodNotAllowed();
-      return api.castVote(request, decodeURIComponent(votes[1]));
+      const id = decodeURIComponent(votes[1]);
+      if (method === 'POST') return api.castVote(request, id);
+      if (method === 'DELETE') return api.retractVote(request, id);
+      return api.methodNotAllowed();
     }
 
     return api.notFound();

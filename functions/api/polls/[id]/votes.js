@@ -6,3 +6,7 @@ import { apiFor } from '../../_lib.js';
 export async function onRequestPost(context) {
   return apiFor(context).castVote(context.request, context.params.id);
 }
+
+export async function onRequestDelete(context) {
+  return apiFor(context).retractVote(context.request, context.params.id);
+}
