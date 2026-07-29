@@ -29,6 +29,12 @@
 
   .col-side .panel:last-child { margin-bottom: 0; }
 
+  .side-divider {
+    border: 0;
+    border-top: 1px solid var(--color-surface-subtle);
+    margin: 1.375rem 0;
+  }
+
   @media (max-width: 900px) {
     .layout { grid-template-columns: 1fr; }
     .col-side { position: static; }
@@ -49,7 +55,6 @@
     border-radius: var(--radius-surface);
     padding: 1.375rem;
     margin-bottom: 1.25rem;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .05);
   }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .875rem; }
@@ -118,7 +123,7 @@
     background: var(--color-surface-page);
     color: var(--color-text);
     font: inherit;
-    transition: border-color .12s ease, box-shadow .12s ease;
+    transition: border-color .12s ease;
   }
 
   input:hover, .list-controls select:hover, textarea:hover { border-color: var(--color-text-secondary); }
@@ -126,9 +131,9 @@
   input:focus-visible,
   .list-controls select:focus-visible,
   textarea:focus-visible {
-    outline: none;
+    outline: 2px solid var(--color-theme-primary);
+    outline-offset: 1px;
     border-color: var(--color-theme-primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-theme-primary) 22%, transparent);
   }
 
   button.primary {
@@ -141,7 +146,6 @@
     font: inherit;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, .12);
     transition: background .14s ease, transform .06s ease;
   }
 
@@ -315,13 +319,12 @@
     color: var(--color-surface-page);
     font-size: .8125rem;
     font-weight: 700;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
     z-index: 10;
   }
 
   @media (prefers-color-scheme: dark) {
     .status-badge.upcoming { background: #3a2f12; color: #f0c14b; }
-    form, .panel { border-color: var(--color-surface-moderate); box-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
+    form, .panel { border-color: var(--color-surface-moderate); }
   }
 
   a.link { display: inline-block; }
@@ -399,17 +402,20 @@
    <aside class="col-side">
      <p class="side-hint" id="side-hint">Förhandsvisning och inbäddningskod visas här när du skapar eller väljer en omröstning.</p>
 
-     <div class="panel" id="preview-panel" hidden>
-       <h2>Förhandsvisning</h2>
-       <p class="lead" style="margin-bottom:12px">Så här ser widgeten ut. Klicka på ett alternativ för att testa – inga röster sparas.</p>
-       <iframe id="preview-frame" title="Förhandsvisning" loading="lazy"></iframe>
-     </div>
+     <div class="panel" id="side-card" hidden>
+       <div id="preview-panel">
+         <h2>Förhandsvisning</h2>
+         <p class="lead" style="margin-bottom:12px">Så här ser widgeten ut. Klicka på ett alternativ för att testa – inga röster sparas.</p>
+         <iframe id="preview-frame" title="Förhandsvisning" loading="lazy"></iframe>
+       </div>
 
-     <div class="panel" id="embed-panel" hidden>
-       <h2>Inbäddningskod</h2>
-       <p class="lead" style="margin-bottom:12px">Klistra in i artikelns HTML-block. Höjden anpassas automatiskt.</p>
-       <textarea id="embed-code" readonly></textarea>
-       <button class="primary" type="button" id="copy">Kopiera</button>
+       <div id="embed-panel" hidden>
+         <hr class="side-divider">
+         <h2>Inbäddningskod</h2>
+         <p class="lead" style="margin-bottom:12px">Klistra in i artikelns HTML-block. Höjden anpassas automatiskt.</p>
+         <textarea id="embed-code" readonly></textarea>
+         <button class="primary" type="button" id="copy">Kopiera</button>
+       </div>
      </div>
    </aside>
 
@@ -539,10 +545,10 @@
   function showPollPanels(poll) {
     document.getElementById('embed-code').value = embedCode(poll);
     previewFrame.src = previewUrlForPoll(poll);
-    document.getElementById('preview-panel').hidden = false;
     document.getElementById('embed-panel').hidden = false;
+    document.getElementById('side-card').hidden = false;
     document.getElementById('side-hint').hidden = true;
-    document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('side-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   // widget.html in preview mode renders from these query params without hitting
@@ -582,9 +588,10 @@
 
   function showPreview(url) {
     previewFrame.src = url;
-    document.getElementById('preview-panel').hidden = false;
+    document.getElementById('embed-panel').hidden = true;
+    document.getElementById('side-card').hidden = false;
     document.getElementById('side-hint').hidden = true;
-    document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('side-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   document.getElementById('preview').addEventListener('click', function () {
