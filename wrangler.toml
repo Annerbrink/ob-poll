@@ -6,7 +6,7 @@ compatibility_date = "2026-01-29"
 # CNAME on a domain whose DNS lives outside this Cloudflare account — the same
 # trick min-ekonomi uses. A Worker needs the whole zone on Cloudflare; Pages
 # only needs one CNAME record pointed at it.
-pages_build_output_dir = "public"
+assets = "./public"
 
 # Skapad med `npx wrangler d1 create ob-poll --location weur`. Id:t pekar bara ut
 # databasen — åtkomsten ligger i kontots credentials, inte här.
