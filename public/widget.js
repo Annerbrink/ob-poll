@@ -25,6 +25,7 @@
     choices: document.getElementById('choices'),
     results: document.getElementById('results'),
     summary: document.getElementById('summary'),
+    total: document.getElementById('total'),
     thanks: document.getElementById('thanks'),
     error: document.getElementById('error')
   };
@@ -161,9 +162,9 @@
       var row = document.createElement('div');
       row.className = 'row';
       row.innerHTML =
-        '<div class="row-head"><span class="name"></span><span class="pct">0 %</span></div>' +
-        '<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div></div>' +
-        '<p class="count"></p>';
+        '<div class="row-head"><span class="name"></span>' +
+          '<span class="figures"><span class="count"></span><span class="pct">0 %</span></span></div>' +
+        '<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div></div>';
       el.results.appendChild(row);
       rows[choice] = row;
     });
@@ -255,17 +256,18 @@
       button.disabled = poll.closed;
     });
 
-    var votes = poll.total + (poll.total === 1 ? ' röst' : ' röster');
+    var count = poll.total + (poll.total === 1 ? ' röst' : ' röster');
+    el.total.textContent = 'Totalt ' + count;
+    el.total.hidden = poll.total === 0;
+
     if (poll.closed) {
-      el.summary.textContent = leadChoice
-        ? 'Flest tippade ' + labels[leadChoice] + ' · ' + votes
-        : 'Omröstningen är stängd · ' + votes;
+      el.summary.textContent = leadChoice ? 'Flest tippade ' + labels[leadChoice] : 'Omröstningen är stängd';
     } else if (mine) {
-      el.summary.textContent = 'Du tippade ' + labels[mine] + ' och totalt ' + votes;
+      el.summary.textContent = 'Du tippade ' + labels[mine];
     } else {
       el.summary.textContent = poll.total === 0
         ? 'Inga röster än – tippa 1, X eller 2'
-        : votes + ' hittills';
+        : 'Tippa 1, X eller 2';
     }
 
     el.loading.hidden = true;
