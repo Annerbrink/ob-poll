@@ -65,6 +65,24 @@ test('an author creates a poll and readers vote on it', () => withApi(async ({ c
   assert.deepStrictEqual(second.body.poll.counts, { 1: 1, X: 1, 2: 0 });
 }));
 
+test('a poll carries its match type through to the reader', () => withApi(async ({ call, author }) => {
+  const created = await author('/api/polls', {
+    method: 'POST',
+    body: JSON.stringify({ homeTeam: 'BK Häcken', awayTeam: 'Kopparbergs/Göteborg', category: 'dam' })
+  });
+  assert.strictEqual(created.body.poll.category, 'dam');
+
+  const shown = await call(`/api/polls/${created.body.poll.id}`);
+  assert.strictEqual(shown.body.poll.category, 'dam');
+
+  // Anything other than the two allowed values is dropped rather than stored.
+  const untyped = await author('/api/polls', {
+    method: 'POST',
+    body: JSON.stringify({ homeTeam: 'AIK', awayTeam: 'Hammarby', category: 'blandat' })
+  });
+  assert.strictEqual(untyped.body.poll.category, null);
+}));
+
 test('a reader changing their mind moves the vote instead of adding one', () =>
   withApi(async ({ call, author }) => {
     const { body } = await author('/api/polls', {

@@ -32,6 +32,48 @@
 
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
 
+  .grid .full { grid-column: 1 / -1; }
+
+  .segmented { display: flex; gap: .5rem; }
+
+  .segmented button {
+    flex: 1;
+    padding: .5625rem .625rem;
+    border: 1px solid var(--color-surface-moderate);
+    border-radius: var(--radius-button);
+    background: var(--color-surface-page);
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .segmented button:hover { border-color: var(--color-theme-primary); }
+
+  .segmented button[aria-pressed="true"] {
+    border-color: var(--color-theme-primary);
+    background: var(--color-theme-primary);
+    color: var(--color-button-primary-foreground);
+    font-weight: 700;
+  }
+
+  .form-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+
+  button.secondary {
+    margin-top: 1.125rem;
+    padding: .625rem 1.25rem;
+    border: 1px solid var(--color-theme-primary);
+    border-radius: var(--radius-button-themed);
+    background: var(--color-surface-page);
+    color: var(--color-theme-primary);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  button.secondary:hover { background: var(--color-theme-tertiary); }
+
+  #preview-frame { width: 100%; max-width: 520px; height: 500px; border: 0; }
+
   label {
     display: block;
     font-size: .75rem;
@@ -137,6 +179,13 @@
         <label for="away">Bortalag <span class="hint">(2)</span></label>
         <input id="away" required maxlength="60" placeholder="IFK Göteborg">
       </div>
+      <div class="full">
+        <label>Matchtyp</label>
+        <div class="segmented" id="category" role="group" aria-label="Matchtyp">
+          <button type="button" data-category="herr" aria-pressed="false">Herr</button>
+          <button type="button" data-category="dam" aria-pressed="false">Dam</button>
+        </div>
+      </div>
       <div>
         <label for="kickoff">Avspark <span class="hint">(valfritt)</span></label>
         <input id="kickoff" type="datetime-local">
@@ -146,9 +195,18 @@
         <input id="closes" type="datetime-local">
       </div>
     </div>
-    <button class="primary" type="submit">Skapa omröstning</button>
+    <div class="form-actions">
+      <button class="primary" type="submit">Skapa omröstning</button>
+      <button class="secondary" type="button" id="preview">Förhandsvisa</button>
+    </div>
     <p class="notice error" id="form-error" hidden></p>
   </form>
+
+  <div class="panel" id="preview-panel" hidden>
+    <h2>Förhandsvisning</h2>
+    <p class="lead" style="margin-bottom:12px">Så här ser widgeten ut. Klicka på ett alternativ för att testa – inga röster sparas.</p>
+    <iframe id="preview-frame" title="Förhandsvisning" loading="lazy"></iframe>
+  </div>
 
   <div class="panel" id="embed-panel" hidden>
     <h2>Inbäddningskod</h2>
@@ -192,6 +250,30 @@
     });
   }
 
+  // Match type is optional and can be cleared, so clicking the active button
+  // deselects it and leaves the poll without a category.
+  var categoryGroup = document.getElementById('category');
+  categoryGroup.addEventListener('click', function (event) {
+    var button = event.target.closest('button[data-category]');
+    if (!button) return;
+    var wasActive = button.getAttribute('aria-pressed') === 'true';
+    categoryGroup.querySelectorAll('button').forEach(function (other) {
+      other.setAttribute('aria-pressed', 'false');
+    });
+    button.setAttribute('aria-pressed', wasActive ? 'false' : 'true');
+  });
+
+  function selectedCategory() {
+    var active = categoryGroup.querySelector('button[aria-pressed="true"]');
+    return active ? active.dataset.category : null;
+  }
+
+  function clearCategory() {
+    categoryGroup.querySelectorAll('button').forEach(function (button) {
+      button.setAttribute('aria-pressed', 'false');
+    });
+  }
+
   function embedCode(poll) {
     var src = location.origin + '/widget.html?poll=' + poll.id;
     var title = (poll.homeTeam + ' – ' + poll.awayTeam).replace(/"/g, '&quot;');
@@ -222,6 +304,40 @@
     document.getElementById('embed-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
+  // Builds the same widget.html the reader gets, but in preview mode: it renders
+  // from these query params without hitting the API, so nothing is saved.
+  function previewUrl() {
+    var query = new URLSearchParams({ preview: '1' });
+    var home = document.getElementById('home').value.trim();
+    var away = document.getElementById('away').value.trim();
+    var category = selectedCategory();
+    var kickoff = OB_TIME.toIso(document.getElementById('kickoff').value);
+    var closes = OB_TIME.toIso(document.getElementById('closes').value);
+
+    if (home) query.set('home', home);
+    if (away) query.set('away', away);
+    if (category) query.set('category', category);
+    if (kickoff) query.set('kickoff', kickoff);
+    if (closes) query.set('closes', closes);
+    return 'widget.html?' + query.toString();
+  }
+
+  var previewFrame = document.getElementById('preview-frame');
+
+  document.getElementById('preview').addEventListener('click', function () {
+    previewFrame.src = previewUrl();
+    document.getElementById('preview-panel').hidden = false;
+    document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  // The preview iframe resizes itself the same way an embedded widget does.
+  window.addEventListener('message', function (event) {
+    if (!event.data || event.data.type !== 'ob-poll:height') return;
+    if (event.source === previewFrame.contentWindow) {
+      previewFrame.style.height = event.data.height + 'px';
+    }
+  });
+
   document.getElementById('copy').addEventListener('click', function () {
     var field = document.getElementById('embed-code');
     field.select();
@@ -240,12 +356,15 @@
       body: JSON.stringify({
         homeTeam: document.getElementById('home').value,
         awayTeam: document.getElementById('away').value,
+        category: selectedCategory(),
         kickoff: OB_TIME.toIso(document.getElementById('kickoff').value),
         closesAt: OB_TIME.toIso(document.getElementById('closes').value)
       })
     })
       .then(function (body) {
         event.target.reset();
+        clearCategory();
+        document.getElementById('preview-panel').hidden = true;
         showEmbed(body.poll);
         loadPolls();
       })

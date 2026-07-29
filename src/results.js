@@ -37,6 +37,7 @@ function present(poll, yourVote) {
     awayTeam: poll.awayTeam,
     kickoff: poll.kickoff,
     closesAt: poll.closesAt,
+    category: poll.category || null,
     closed: isClosed(poll),
     counts,
     percentages: toPercentages(counts),

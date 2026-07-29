@@ -82,11 +82,22 @@ body {
 
 .eyebrow {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
   font-size: .75rem;
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--color-theme-primary);
+}
+
+.eyebrow .category {
+  padding: .125rem .4375rem;
+  border-radius: var(--radius-button-themed);
+  background: var(--color-theme-tertiary);
+  color: var(--color-theme-secondary);
+  letter-spacing: .04em;
 }
 
 h1 {
