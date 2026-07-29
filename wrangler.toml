@@ -1,7 +1,8 @@
 name = "ob-poll"
 compatibility_date = "2026-01-29"
 
-assets = { directory = "./public" }
+[assets]
+directory = "./public"
 
 [[d1_databases]]
 binding = "DB"
