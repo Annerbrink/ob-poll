@@ -1,11 +1,9 @@
 name = "ob-poll"
 compatibility_date = "2026-01-29"
 
-# Static files in public/, Pages Functions in functions/.
 [assets]
 directory = "./public"
 
-# Database binding for Cloudflare D1
 [[d1_databases]]
 binding = "DB"
 database_name = "ob-poll"
