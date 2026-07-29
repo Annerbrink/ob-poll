@@ -12,7 +12,7 @@
   .page { max-width: 1120px; margin: 0 auto; }
 
   /* Left: token, skapa-formulär och listan. Höger: förhandsvisning + kod, kvar i vy. */
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 1.5rem; align-items: start; }
+  .layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1.5rem; align-items: start; }
 
   .col-side { position: sticky; top: 1.25rem; }
 
@@ -241,7 +241,7 @@
    <div class="col-main">
 
   <div class="panel">
-    <h2>Skribenttoken</h2>
+    <h2>Lösenord</h2>
     <label for="token">Token <span class="hint">(sparas lokalt i den här webbläsaren)</span></label>
     <input id="token" type="password" autocomplete="off" placeholder="ADMIN_TOKEN">
   </div>
@@ -422,11 +422,14 @@
     ].join('\n');
   }
 
-  function showEmbed(poll) {
+  /** Shows both the live preview and the embed code for a saved poll in one go. */
+  function showPollPanels(poll) {
     document.getElementById('embed-code').value = embedCode(poll);
+    previewFrame.src = previewUrlForPoll(poll);
+    document.getElementById('preview-panel').hidden = false;
     document.getElementById('embed-panel').hidden = false;
     document.getElementById('side-hint').hidden = true;
-    document.getElementById('embed-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   // widget.html in preview mode renders from these query params without hitting
@@ -517,8 +520,7 @@
       .then(function (body) {
         event.target.reset();
         clearCategory();
-        document.getElementById('preview-panel').hidden = true;
-        showEmbed(body.poll);
+        showPollPanels(body.poll);
         showToast('Omröstning skapad');
         loadPolls();
       })
@@ -726,11 +728,11 @@
 
       var editForm = buildEditForm(poll, function () { showToast('Ändringar sparade'); loadPolls(); });
 
-      var preview = document.createElement('button');
-      preview.type = 'button';
-      preview.className = 'link';
-      preview.textContent = 'Förhandsvisa';
-      preview.addEventListener('click', function () { showPreview(previewUrlForPoll(poll)); });
+      var show = document.createElement('button');
+      show.type = 'button';
+      show.className = 'link';
+      show.textContent = 'Förhandsvisa & kod';
+      show.addEventListener('click', function () { showPollPanels(poll); });
 
       var open = document.createElement('a');
       open.className = 'link';
@@ -751,12 +753,6 @@
       duplicate.textContent = 'Duplicera';
       duplicate.addEventListener('click', function () { duplicatePoll(poll); });
 
-      var embed = document.createElement('button');
-      embed.type = 'button';
-      embed.className = 'link';
-      embed.textContent = 'Inbäddningskod';
-      embed.addEventListener('click', function () { showEmbed(poll); });
-
       var remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'link';
@@ -767,7 +763,7 @@
           .then(function () { showToast('Omröstning borttagen'); loadPolls(); });
       });
 
-      actions.append(preview, open, edit, duplicate, embed, remove);
+      actions.append(show, open, edit, duplicate, remove);
       item.append(info, actions, editForm);
       listEl.appendChild(item);
     });
