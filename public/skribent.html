@@ -372,12 +372,8 @@
         </div>
       </div>
       <div>
-        <label for="kickoff">Avspark</label>
+        <label for="kickoff">Avspark <span class="hint">(röstningen stänger här)</span></label>
         <input id="kickoff" type="datetime-local" required>
-      </div>
-      <div>
-        <label for="closes">Stänger <span class="hint">(valfritt, annars vid avspark)</span></label>
-        <input id="closes" type="datetime-local">
       </div>
     </div>
     <div class="form-actions">
@@ -568,12 +564,13 @@
   }
 
   function previewUrl() {
+    var kickoff = OB_TIME.toIso(document.getElementById('kickoff').value);
     return previewQuery({
       home: document.getElementById('home').value.trim(),
       away: document.getElementById('away').value.trim(),
       category: selectedCategory(),
-      kickoff: OB_TIME.toIso(document.getElementById('kickoff').value),
-      closes: OB_TIME.toIso(document.getElementById('closes').value)
+      kickoff: kickoff,
+      closes: kickoff
     });
   }
 
@@ -623,14 +620,8 @@
     formError.hidden = true;
 
     var kickoffIso = OB_TIME.toIso(document.getElementById('kickoff').value);
-    var closesIso = OB_TIME.toIso(document.getElementById('closes').value);
     if (!kickoffIso) {
       formError.textContent = 'Avspark måste anges';
-      formError.hidden = false;
-      return;
-    }
-    if (!timesValid(kickoffIso, closesIso)) {
-      formError.textContent = 'Stängningstiden kan inte vara före avspark';
       formError.hidden = false;
       return;
     }
@@ -641,8 +632,7 @@
         homeTeam: document.getElementById('home').value,
         awayTeam: document.getElementById('away').value,
         category: selectedCategory(),
-        kickoff: kickoffIso,
-        closesAt: closesIso
+        kickoff: kickoffIso
       })
     })
       .then(function (body) {
@@ -667,10 +657,6 @@
     toastTimer = setTimeout(function () { toast.hidden = true; }, 2500);
   }
 
-  function timesValid(kickoffIso, closesIso) {
-    return !(kickoffIso && closesIso && new Date(closesIso) < new Date(kickoffIso));
-  }
-
   /** Två lägen: Öppen = går att rösta på, Stängd = röstningen har stängt. */
   function pollStatus(poll) {
     return poll.closed
@@ -690,7 +676,6 @@
     document.getElementById('away').value = poll.awayTeam;
     fillCategory(poll.category);
     document.getElementById('kickoff').value = OB_TIME.toInput(poll.kickoff);
-    document.getElementById('closes').value = OB_TIME.toInput(poll.closesAt);
     document.getElementById('create-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.getElementById('home').focus();
     showToast('Uppgifterna kopierades – ändra och skapa');
@@ -774,10 +759,6 @@
     kickoff.type = 'datetime-local'; kickoff.required = true; kickoff.value = OB_TIME.toInput(poll.kickoff);
     field('Avspark', kickoff);
 
-    var closes = document.createElement('input');
-    closes.type = 'datetime-local'; closes.value = OB_TIME.toInput(poll.closesAt);
-    field('Stänger', closes);
-
     var save = document.createElement('button');
     save.className = 'primary'; save.type = 'submit'; save.textContent = 'Spara';
 
@@ -798,14 +779,8 @@
       errorText.hidden = true;
 
       var kickoffIso = OB_TIME.toIso(kickoff.value);
-      var closesIso = OB_TIME.toIso(closes.value);
       if (!kickoffIso) {
         errorText.textContent = 'Avspark måste anges';
-        errorText.hidden = false;
-        return;
-      }
-      if (!timesValid(kickoffIso, closesIso)) {
-        errorText.textContent = 'Stängningstiden kan inte vara före avspark';
         errorText.hidden = false;
         return;
       }
@@ -816,8 +791,7 @@
           homeTeam: home.value,
           awayTeam: away.value,
           category: categoryValue(category),
-          kickoff: kickoffIso,
-          closesAt: closesIso
+          kickoff: kickoffIso
         })
       })
         .then(onSaved)
@@ -914,7 +888,14 @@
       var actions = document.createElement('div');
       actions.className = 'poll-actions';
 
-      var editForm = buildEditForm(poll, function () { showToast('Ändringar sparade'); loadPolls(); });
+      var editForm = buildEditForm(poll, function (body) {
+        showToast('Ändringar sparade');
+        loadPolls();
+        // Keep an open preview/code card in sync with the edited poll.
+        if (body && body.poll && !document.getElementById('side-card').hidden) {
+          showPollPanels(body.poll);
+        }
+      });
 
       var show = iconAction('eye', 'Förhandsvisa & kod', function () { showPollPanels(poll); });
       var open = iconAction('external', 'Visa i ny flik', { href: 'widget.html?poll=' + encodeURIComponent(poll.id) });
