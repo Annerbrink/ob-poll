@@ -172,6 +172,10 @@ function readFixture(body) {
   const closesAt = cleanTimestamp(body.closesAt);
   if (closesAt === false) return { error: json(400, { error: 'Stängningstiden är inte ett giltigt datum' }) };
 
+  if (kickoff && closesAt && new Date(closesAt) < new Date(kickoff)) {
+    return { error: json(400, { error: 'Stängningstiden kan inte vara före avspark' }) };
+  }
+
   return {
     fields: {
       homeTeam,
