@@ -1,0 +1,195 @@
+/*
+ * Design tokens lifted from olandsbladet.se (main.css / jalla-casual.css),
+ * theme "gota-blue" — so the widget sits in an article without looking bolted on.
+ *
+ * BNSansVariable is loaded from the paper's own asset path, which resolves when
+ * the widget is served from the same origin as the site. Hosted anywhere else the
+ * font request simply fails and the fallback stack takes over; set --ob-font-base
+ * to point somewhere else if the assets move.
+ */
+
+@font-face {
+  font-family: BNSansVariable;
+  src: url("/assets/rev/fonts/bnsans/BNSans-Variable-R2XC4SMD.woff2") format("woff2-variations"),
+       url("/assets/rev/fonts/bnsans/BNSans-Variable-R2XC4SMD.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --bn-sans-family: BNSansVariable, "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --color-surface-page: #ffffff;
+  --color-surface-minimal: #f7f9fb;
+  --color-surface-subtle: #eef1f5;
+  --color-surface-moderate: #e4e8ee;
+
+  --color-text: #1f1f1f;
+  --color-text-secondary: #505762;
+
+  --color-theme-primary: #006fb4;
+  --color-theme-secondary: #005f99;
+  --color-theme-tertiary: #edf7fb;
+
+  --color-button-primary-foreground: #ffffff;
+
+  --radius-button: .125rem;
+  --radius-button-themed: 62.4375rem;
+  --radius-surface: .75rem;
+
+  color-scheme: light dark;
+}
+
+/* Mirrors html.allow-dark-mode on the site: follows the reader's system setting. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface-page: #141414;
+    --color-surface-minimal: #1f1f1f;
+    --color-surface-subtle: #373a3f;
+    --color-surface-moderate: #505762;
+
+    --color-text: #f7f9fb;
+    --color-text-secondary: #e4e8ee;
+
+    --color-theme-primary: #64a3d0;
+    --color-theme-secondary: #9ac3ea;
+    --color-theme-tertiary: #1a334c;
+
+    --color-button-primary-foreground: #141414;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; background: var(--color-surface-page); }
+
+body {
+  color: var(--color-text);
+  font-family: var(--bn-sans-family);
+  font-size: .875rem;
+  line-height: 1.45;
+  padding: 4px;
+}
+
+.poll {
+  max-width: 520px;
+  margin: 0 auto;
+  background: var(--color-surface-page);
+  border: 1px solid var(--color-surface-moderate);
+  border-radius: var(--radius-surface);
+  padding: 1.25rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--color-theme-primary);
+}
+
+h1 {
+  margin: .5rem 0 .25rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+}
+
+.meta { margin: 0; font-size: .8125rem; color: var(--color-text-secondary); }
+
+.question { margin: 1.125rem 0 .625rem; font-size: 1rem; font-weight: 700; }
+
+.choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .125rem;
+  padding: .75rem .375rem;
+  border: 1px solid var(--color-surface-moderate);
+  border-radius: var(--radius-button);
+  background: var(--color-surface-page);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color .12s ease, background .12s ease, color .12s ease;
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--color-theme-primary);
+  background: var(--color-theme-tertiary);
+}
+
+.choice:focus-visible { outline: 2px solid var(--color-theme-primary); outline-offset: 2px; }
+
+.choice[aria-pressed="true"] {
+  border-color: var(--color-theme-primary);
+  background: var(--color-theme-tertiary);
+  color: var(--color-theme-secondary);
+}
+
+.choice:disabled { cursor: not-allowed; opacity: .6; }
+
+.choice .sign { font-size: 1.375rem; font-weight: 700; line-height: 1.1; }
+
+.choice .team {
+  font-size: .6875rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.choice[aria-pressed="true"] .team { color: inherit; }
+
+.results { margin-top: 1.25rem; display: grid; gap: .875rem; }
+
+.row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .75rem;
+  margin-bottom: .3125rem;
+  font-size: .8125rem;
+}
+
+.row-head .name { font-weight: 600; }
+.row-head .pct { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.track {
+  height: .5rem;
+  border-radius: var(--radius-button-themed);
+  background: var(--color-surface-subtle);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  width: 0;
+  border-radius: var(--radius-button-themed);
+  background: color-mix(in srgb, var(--color-theme-primary) 40%, var(--color-surface-subtle));
+  transition: width .35s ease;
+}
+
+.row.mine .fill { background: var(--color-theme-primary); }
+.row.mine .row-head .pct { color: var(--color-theme-secondary); }
+
+.count { margin: .3125rem 0 0; font-size: .6875rem; color: var(--color-text-secondary); }
+
+footer {
+  margin-top: 1rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--color-surface-subtle);
+  font-size: .75rem;
+  color: var(--color-text-secondary);
+}
+
+footer p { margin: 0; }
+
+.error { color: #d73c3c; }
+
+.loading { color: var(--color-text-secondary); }
+
+[hidden] { display: none !important; }

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 X 2-omröstning</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="widget.css">
+</head>
+<body>
+
+<section class="poll" id="poll" aria-live="polite">
+  <p class="loading" id="loading">Laddar omröstning …</p>
+
+  <div id="content" hidden>
+    <p class="eyebrow">Tippa matchen</p>
+    <h1 id="fixture"></h1>
+    <p class="meta" id="kickoff"></p>
+
+    <p class="question">Vem vinner?</p>
+
+    <div class="choices" id="choices">
+      <button class="choice" type="button" data-choice="1" aria-pressed="false">
+        <span class="sign">1</span><span class="team" id="team-home"></span>
+      </button>
+      <button class="choice" type="button" data-choice="X" aria-pressed="false">
+        <span class="sign">X</span><span class="team">Oavgjort</span>
+      </button>
+      <button class="choice" type="button" data-choice="2" aria-pressed="false">
+        <span class="sign">2</span><span class="team" id="team-away"></span>
+      </button>
+    </div>
+
+    <div class="results" id="results"></div>
+
+    <footer>
+      <p id="summary"></p>
+      <p class="error" id="error" hidden></p>
+    </footer>
+  </div>
+</section>
+
+<script src="time.js"></script>
+<script src="widget.js"></script>
+</body>
+</html>
