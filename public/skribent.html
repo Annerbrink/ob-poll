@@ -89,6 +89,27 @@
 
   .form-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
 
+  /* Avspark stays short and the buttons fill the empty space to its right,
+     bottom-aligned so they line up with the field. */
+  .kickoff-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .kickoff-field { flex: 0 1 auto; }
+  .kickoff-field input { width: 16rem; max-width: 100%; }
+
+  .form-actions.create-actions { margin: 0; justify-content: flex-end; }
+  .create-actions button { margin-top: 0; }
+
+  @media (max-width: 560px) {
+    .kickoff-field, .kickoff-field input { width: 100%; }
+    .form-actions.create-actions { justify-content: flex-start; }
+  }
+
   button.secondary {
     margin-top: 1.125rem;
     padding: .6875rem 1.375rem;
@@ -371,14 +392,16 @@
           <button type="button" data-category="dam" aria-pressed="false">Dam</button>
         </div>
       </div>
-      <div>
-        <label for="kickoff">Avspark <span class="hint">(röstningen stänger här)</span></label>
-        <input id="kickoff" type="datetime-local" required>
+      <div class="full kickoff-row">
+        <div class="kickoff-field">
+          <label for="kickoff">Avspark <span class="hint">(röstningen stänger här)</span></label>
+          <input id="kickoff" type="datetime-local" required>
+        </div>
+        <div class="form-actions create-actions">
+          <button class="primary" type="submit">Skapa omröstning</button>
+          <button class="secondary" type="button" id="preview">Förhandsvisa</button>
+        </div>
       </div>
-    </div>
-    <div class="form-actions">
-      <button class="primary" type="submit">Skapa omröstning</button>
-      <button class="secondary" type="button" id="preview">Förhandsvisa</button>
     </div>
     <p class="notice error" id="form-error" hidden></p>
   </form>
