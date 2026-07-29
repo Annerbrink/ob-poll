@@ -5,7 +5,18 @@ läsarna tippar **1** (hemmavinst), **X** (oavgjort) eller **2** (bortavinst) oc
 resultatet visas i procent. Röster och omröstningar sparas serverside, så alla
 läsare ser samma siffror.
 
-## Kom igång
+## Två sätt att köra
+
+Samma kod kör på båda: `src/handler.js` är skriven mot webbplattformens `Request`
+och `Response`, och båda ingångarna ger den ett datalager.
+
+| | Cloudflare Workers | Lokalt |
+| --- | --- | --- |
+| Ingång | `src/worker.js` | `server.js` |
+| Datalager | D1 (`src/repository-d1.js`) | SQLite-fil (`src/repository-sqlite.js`) |
+| Statiska filer | Workers Assets | inbyggd filserver |
+
+### Lokalt
 
 ```bash
 npm install
@@ -17,14 +28,31 @@ ADMIN_TOKEN=valfri-hemlig-sträng npm start
 
 Sätts inte `ADMIN_TOKEN` genereras en tillfällig token som skrivs ut i loggen.
 
+### Cloudflare
+
+```bash
+npx wrangler d1 create ob-poll          # klistra in id:t i wrangler.toml
+npx wrangler d1 migrations apply ob-poll --remote
+npx wrangler secret put ADMIN_TOKEN
+npx wrangler deploy
+```
+
+Kör lokalt mot en riktig Worker och en lokal D1 med `npm run dev` – lägg då
+`ADMIN_TOKEN=...` i `.dev.vars` (som inte checkas in) och kör
+`npx wrangler d1 migrations apply ob-poll --local` en gång.
+
+Widgeten och skribentvyn serveras av Workers Assets, alltså direkt från kanten:
+att öppna en artikel väcker aldrig workern, bara röstning och resultathämtning gör
+det. Sätt `FRAME_ANCESTORS` i `wrangler.toml` innan omröstningen läggs i en artikel.
+
 ### Miljövariabler
 
 | Variabel | Standard | Beskrivning |
 | --- | --- | --- |
-| `PORT` | `3000` | Port. |
-| `ADMIN_TOKEN` | slumpas vid start | Token som krävs för att skapa och ta bort omröstningar. |
-| `DATABASE_FILE` | `data/polls.db` | Var SQLite-filen ligger. |
-| `FRAME_ANCESTORS` | – | Sätt till t.ex. `https://*.olandsbladet.se` för att bara tillåta inbäddning på egna domäner. |
+| `ADMIN_TOKEN` | slumpas lokalt vid start | Token som krävs för att skapa och ta bort omröstningar. På Cloudflare en secret. |
+| `FRAME_ANCESTORS` | – | Vilka domäner som får bädda in widgeten, t.ex. `https://*.olandsbladet.se`. |
+| `PORT` | `3000` | Bara lokalt. |
+| `DATABASE_FILE` | `data/polls.db` | Bara lokalt. |
 
 ## Så gör skribenten
 
@@ -46,26 +74,30 @@ befinner sig.
 
 ## Datalagret
 
-All läsning och skrivning går genom `src/repository.js`, som är den enda modul som
-känner till databasen. Standardimplementationen är SQLite (`data/polls.db`) med två
-tabeller enligt `src/schema.sql`:
+All läsning och skrivning går genom ett datalager med sex metoder – `createPoll`,
+`getPoll`, `listPolls`, `deletePoll`, `castVote` och `getVote` (plus `recount` för
+reparation). Det finns i två utbytbara implementationer som delar schema och SQL,
+eftersom D1 är SQLite:
+
+- `src/repository-d1.js` – Cloudflare D1, används i produktion
+- `src/repository-sqlite.js` – lokal fil, används vid utveckling
+
+Schemat ligger i `migrations/0001_init.sql` och har två tabeller:
 
 - `polls` – id, lagnamn, avspark, stängningstid, skapad av, skapad när samt en löpande
   rösträkning (`count_1`, `count_x`, `count_2`)
 - `votes` – en rad per läsare och omröstning (`PRIMARY KEY (poll_id, voter_id)`), så en
   läsare som ändrar sig flyttar sin röst i stället för att lägga till en ny
 
-Rösträkningen ligger i `polls`-raden och uppdateras i samma transaktion som rösten
-skrivs. Att läsa ett resultat blir därmed en rad i stället för en genomsökning av
-varje röst – det är skillnaden mellan att rymmas och att inte rymmas i radbudgeten hos
-en databas som tar betalt per läst rad, hur populär matchen än blir. `recount()` bygger
-om siffrorna från rösterna och används i testerna och vid behov av reparation.
+Rösträkningen ligger i `polls`-raden och uppdateras tillsammans med rösten – i en
+transaktion lokalt, i en `batch` på D1. Att läsa ett resultat blir därmed en rad i
+stället för en genomsökning av varje röst, vilket är skillnaden mellan att rymmas och
+att inte rymmas i D1:s radbudget hur populär matchen än blir. `recount()` bygger om
+siffrorna från rösterna om de någon gång behöver repareras.
 
-Ska omröstningarna ligga i tidningens egen databas i stället byter man ut
-`createRepository()` mot en implementation med samma sex metoder – `createPoll`,
-`getPoll`, `listPolls`, `deletePoll`, `castVote` och `getVote`. Inget annat i koden rör
-lagringen. En databas som skapades innan rösträkningen fanns får kolumnerna tillagda och
-ifyllda automatiskt vid start.
+Ska omröstningarna ligga i tidningens egen databas skriver man en tredje
+implementation med samma metoder. Inget annat i koden rör lagringen. En lokal databas
+som skapades innan rösträkningen fanns får kolumnerna tillagda och ifyllda vid start.
 
 ## API
 
@@ -115,7 +147,9 @@ Behövs starkare spärr får `resolveVoterId()` i `src/app.js` knytas till inlog
 npm test
 ```
 
-Täcker procentavrundning, skapande av omröstning, att en ändrad röst flyttas i stället
-för att räknas dubbelt, att den lagrade rösträkningen stämmer med en omräkning hur
-rösterna än flyttas, att resultat överlever en omstart, att en borttagen omröstning tar
-sina röster med sig, stängd omröstning samt behörighets- och valideringsfel.
+Sjutton fall: procentavrundningen, hela API:et via `src/handler.js`, och samma svit
+körd mot båda datalagren – att rösträkningen stämmer med en omräkning hur rösterna än
+flyttas, att en borttagen omröstning tar sina röster med sig, och att resultat överlever
+en omstart. D1-implementationen testas mot en stand-in som talar D1:s API ovanpå SQLite,
+vilket provkör den riktiga SQL:en och batchningen men inte ersätter ett rökprov efter
+`wrangler deploy`.

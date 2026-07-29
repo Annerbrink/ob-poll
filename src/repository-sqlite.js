@@ -2,24 +2,30 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
-const CHOICES = ['1', 'X', '2'];
-const COUNT_COLUMNS = { 1: 'count_1', X: 'count_x', 2: 'count_2' };
+const { CHOICES, COUNT_COLUMNS } = require('./choices');
+const { buildId } = require('./poll-id');
+const { toPoll } = require('./rows');
+
+const SCHEMA = path.join(__dirname, '..', 'migrations', '0001_init.sql');
 
 /**
- * The data layer. Everything above this module talks to polls and votes only
- * through the object returned by createRepository(), so swapping SQLite for
- * Postgres, D1 or the CMS's own store means reimplementing these six methods.
+ * The data layer on a local SQLite file — used for development and for anyone
+ * running the poll on their own server. Its Cloudflare counterpart lives in
+ * repository-d1.js and speaks the same six methods; the SQL is shared, since D1
+ * is SQLite too.
+ *
+ * Every method is async even though better-sqlite3 is synchronous, so that both
+ * implementations are interchangeable.
  */
-function createRepository({ file = path.join(__dirname, '..', 'data', 'polls.db') } = {}) {
+function createSqliteRepository({ file = path.join(__dirname, '..', 'data', 'polls.db') } = {}) {
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
 
   const db = new Database(file);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
-  db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
+  db.exec(fs.readFileSync(SCHEMA, 'utf8'));
   addTallyColumns(db);
 
   const statements = {
@@ -48,20 +54,6 @@ function createRepository({ file = path.join(__dirname, '..', 'data', 'polls.db'
     );
   }
 
-  function toPoll(row) {
-    if (!row) return null;
-    return {
-      id: row.id,
-      homeTeam: row.home_team,
-      awayTeam: row.away_team,
-      kickoff: row.kickoff,
-      closesAt: row.closes_at,
-      createdBy: row.created_by,
-      createdAt: row.created_at,
-      counts: { 1: row.count_1, X: row.count_x, 2: row.count_2 }
-    };
-  }
-
   /**
    * Moving a vote has to touch the votes row and the tally together, or the
    * two disagree the moment something fails in between.
@@ -76,7 +68,7 @@ function createRepository({ file = path.join(__dirname, '..', 'data', 'polls.db'
   });
 
   return {
-    createPoll({ homeTeam, awayTeam, kickoff = null, closesAt = null, createdBy = null }) {
+    async createPoll({ homeTeam, awayTeam, kickoff = null, closesAt = null, createdBy = null }) {
       const poll = {
         id: buildId(homeTeam, awayTeam),
         homeTeam,
@@ -91,30 +83,30 @@ function createRepository({ file = path.join(__dirname, '..', 'data', 'polls.db'
     },
 
     /** One row, tally included — no second query to count the votes. */
-    getPoll(id) {
+    async getPoll(id) {
       return toPoll(statements.selectPoll.get(id));
     },
 
-    listPolls({ limit = 50 } = {}) {
+    async listPolls({ limit = 50 } = {}) {
       return statements.selectPolls.all(limit).map(toPoll);
     },
 
-    deletePoll(id) {
+    async deletePoll(id) {
       return statements.deletePoll.run(id).changes > 0;
     },
 
     /** Casting again with a different sign moves the reader's vote rather than adding one. */
-    castVote({ pollId, voterId, choice }) {
+    async castVote({ pollId, voterId, choice }) {
       castVote({ pollId, voterId, choice, now: new Date().toISOString() });
     },
 
-    getVote({ pollId, voterId }) {
+    async getVote({ pollId, voterId }) {
       const row = statements.selectVote.get(pollId, voterId);
       return row ? row.choice : null;
     },
 
     /** Counts rebuilt from the votes themselves — for tests and repair, not for serving. */
-    recount(pollId) {
+    async recount(pollId) {
       const counts = { 1: 0, X: 0, 2: 0 };
       for (const row of statements.countVotes.all(pollId)) counts[row.choice] = row.n;
       return counts;
@@ -146,17 +138,4 @@ function addTallyColumns(db) {
   })();
 }
 
-function buildId(homeTeam, awayTeam) {
-  const slug = [homeTeam, awayTeam]
-    .join(' vs ')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 60);
-
-  return `${slug || 'poll'}-${crypto.randomBytes(3).toString('hex')}`;
-}
-
-module.exports = { createRepository, CHOICES };
+module.exports = { createSqliteRepository };

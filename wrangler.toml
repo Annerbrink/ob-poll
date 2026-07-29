@@ -1,0 +1,28 @@
+name = "ob-poll"
+main = "src/worker.js"
+compatibility_date = "2026-01-29"
+compatibility_flags = ["nodejs_compat"]
+
+# The widget, the author view and their assets. Served straight from the edge,
+# so opening an article never wakes the Worker — only voting and fetching
+# results do.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Create the database once with:
+#   npx wrangler d1 create ob-poll
+# then paste the id it prints here.
+[[d1_databases]]
+binding = "DB"
+database_name = "ob-poll"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# ADMIN_TOKEN is a secret, never put it here:
+#   npx wrangler secret put ADMIN_TOKEN
+#
+# FRAME_ANCESTORS decides who may embed the widget. Leave it out while testing,
+# set it before the poll goes into an article:
+# [vars]
+# FRAME_ANCESTORS = "https://*.olandsbladet.se"

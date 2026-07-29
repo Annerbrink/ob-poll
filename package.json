@@ -5,6 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "test": "node --test test/*.test.js"
   },
   "repository": {
@@ -13,7 +15,9 @@
   },
   "license": "ISC",
   "dependencies": {
-    "better-sqlite3": "^13.0.2",
-    "express": "^5.2.1"
+    "better-sqlite3": "^13.0.2"
+  },
+  "devDependencies": {
+    "wrangler": "^4.115.0"
   }
 }

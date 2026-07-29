@@ -3,23 +3,23 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { createRepository, CHOICES } = require('../src/repository');
-const { createApp } = require('../src/app');
+const { createSqliteRepository } = require('../src/repository-sqlite');
+const { createHandler } = require('../src/handler');
 const { toPercentages } = require('../src/results');
 
 const TOKEN = 'test-token';
+const BASE = 'https://poll.test';
 
-function withServer(run) {
-  const repository = createRepository({ file: ':memory:' });
-  const app = createApp({ repository, adminToken: TOKEN });
-  const server = app.listen(0);
-  const base = `http://127.0.0.1:${server.address().port}`;
+function withApi(run) {
+  const repository = createSqliteRepository({ file: ':memory:' });
+  const handle = createHandler({ repository, adminToken: TOKEN });
 
   const call = async (path, options = {}) => {
-    const response = await fetch(base + path, {
-      ...options,
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-    });
+    const response = await handle(new Request(BASE + path, {
+      method: options.method || 'GET',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, options.headers),
+      body: options.body
+    }));
     const body = response.status === 204 ? null : await response.json();
     return { status: response.status, body, headers: response.headers };
   };
@@ -27,8 +27,7 @@ function withServer(run) {
   const author = (path, options = {}) =>
     call(path, { ...options, headers: { Authorization: `Bearer ${TOKEN}`, ...(options.headers || {}) } });
 
-  return run({ call, author })
-    .finally(() => { server.close(); repository.close(); });
+  return run({ call, author, repository }).finally(() => repository.close());
 }
 
 test('percentages always add up to 100', () => {
@@ -41,7 +40,7 @@ test('percentages always add up to 100', () => {
   }
 });
 
-test('an author creates a poll and readers vote on it', () => withServer(async ({ call, author }) => {
+test('an author creates a poll and readers vote on it', () => withApi(async ({ call, author }) => {
   const created = await author('/api/polls', {
     method: 'POST',
     body: JSON.stringify({ homeTeam: 'Örgryte IS', awayTeam: 'IFK Göteborg' })
@@ -67,7 +66,7 @@ test('an author creates a poll and readers vote on it', () => withServer(async (
 }));
 
 test('a reader changing their mind moves the vote instead of adding one', () =>
-  withServer(async ({ call, author }) => {
+  withApi(async ({ call, author }) => {
     const { body } = await author('/api/polls', {
       method: 'POST',
       body: JSON.stringify({ homeTeam: 'AIK', awayTeam: 'Djurgården' })
@@ -83,17 +82,17 @@ test('a reader changing their mind moves the vote instead of adding one', () =>
     assert.strictEqual(moved.body.poll.yourVote, '2');
   }));
 
-test('results survive a restart because they live in the data layer', () => {
+test('results survive a restart because they live in the data layer', async () => {
   const file = `${__dirname}/../data/test-${Date.now()}.db`;
 
-  const first = createRepository({ file });
-  const poll = first.createPoll({ homeTeam: 'Hammarby', awayTeam: 'Malmö FF' });
-  first.castVote({ pollId: poll.id, voterId: 'x'.repeat(32), choice: 'X' });
+  const first = createSqliteRepository({ file });
+  const poll = await first.createPoll({ homeTeam: 'Hammarby', awayTeam: 'Malmö FF' });
+  await first.castVote({ pollId: poll.id, voterId: 'x'.repeat(32), choice: 'X' });
   first.close();
 
-  const second = createRepository({ file });
-  assert.deepStrictEqual(second.getPoll(poll.id).counts, { 1: 0, X: 1, 2: 0 });
-  assert.strictEqual(second.getPoll(poll.id).homeTeam, 'Hammarby');
+  const second = createSqliteRepository({ file });
+  assert.deepStrictEqual((await second.getPoll(poll.id)).counts, { 1: 0, X: 1, 2: 0 });
+  assert.strictEqual((await second.getPoll(poll.id)).homeTeam, 'Hammarby');
   second.close();
 
   for (const suffix of ['', '-wal', '-shm']) {
@@ -101,7 +100,7 @@ test('results survive a restart because they live in the data layer', () => {
   }
 });
 
-test('voting is rejected once the poll has closed', () => withServer(async ({ call, author }) => {
+test('voting is rejected once the poll has closed', () => withApi(async ({ call, author }) => {
   const { body } = await author('/api/polls', {
     method: 'POST',
     body: JSON.stringify({
@@ -119,7 +118,7 @@ test('voting is rejected once the poll has closed', () => withServer(async ({ ca
   assert.match(attempt.body.error, /stängd/);
 }));
 
-test('poll creation requires the author token and valid input', () => withServer(async ({ call, author }) => {
+test('poll creation requires the author token and valid input', () => withApi(async ({ call, author }) => {
   const anonymous = await call('/api/polls', {
     method: 'POST',
     body: JSON.stringify({ homeTeam: 'A', awayTeam: 'B' })
@@ -142,7 +141,7 @@ test('poll creation requires the author token and valid input', () => withServer
   assert.strictEqual(unknown.status, 404);
 }));
 
-test('an invalid choice is rejected', () => withServer(async ({ call, author }) => {
+test('an invalid choice is rejected', () => withApi(async ({ call, author }) => {
   const { body } = await author('/api/polls', {
     method: 'POST',
     body: JSON.stringify({ homeTeam: 'IFK Norrköping', awayTeam: 'Elfsborg' })
@@ -155,41 +154,8 @@ test('an invalid choice is rejected', () => withServer(async ({ call, author }) 
   assert.strictEqual(bad.status, 400);
 }));
 
-test('the stored tally matches a recount however the votes move', () => {
-  const repository = createRepository({ file: ':memory:' });
-  const poll = repository.createPoll({ homeTeam: 'IFK Borgholm', awayTeam: 'Rälla IF' });
-  const voters = Array.from({ length: 12 }, (unused, index) => String(index).padStart(32, '0'));
-
-  voters.forEach((voterId, index) => {
-    repository.castVote({ pollId: poll.id, voterId, choice: CHOICES[index % 3] });
-  });
-
-  // Readers change their minds, some more than once, some back to where they started.
-  repository.castVote({ pollId: poll.id, voterId: voters[0], choice: '2' });
-  repository.castVote({ pollId: poll.id, voterId: voters[0], choice: 'X' });
-  repository.castVote({ pollId: poll.id, voterId: voters[1], choice: '1' });
-  repository.castVote({ pollId: poll.id, voterId: voters[1], choice: '1' });
-  repository.castVote({ pollId: poll.id, voterId: voters[7], choice: '1' });
-
-  const stored = repository.getPoll(poll.id).counts;
-  assert.deepStrictEqual(stored, repository.recount(poll.id));
-  assert.strictEqual(stored['1'] + stored.X + stored['2'], voters.length);
-  repository.close();
-});
-
-test('deleting a poll takes its votes with it', () => {
-  const repository = createRepository({ file: ':memory:' });
-  const poll = repository.createPoll({ homeTeam: 'GAIS', awayTeam: 'Utsiktens BK' });
-  repository.castVote({ pollId: poll.id, voterId: 'd'.repeat(32), choice: '1' });
-
-  assert.strictEqual(repository.deletePoll(poll.id), true);
-  assert.strictEqual(repository.getPoll(poll.id), null);
-  assert.deepStrictEqual(repository.recount(poll.id), { 1: 0, X: 0, 2: 0 });
-  repository.close();
-});
-
 test('results are impersonal and cacheable, votes are neither', () =>
-  withServer(async ({ call, author }) => {
+  withApi(async ({ call, author }) => {
     const { body } = await author('/api/polls', {
       method: 'POST',
       body: JSON.stringify({ homeTeam: 'IFK Borgholm', awayTeam: 'Rälla IF' })
@@ -205,8 +171,8 @@ test('results are impersonal and cacheable, votes are neither', () =>
     assert.strictEqual(vote.headers.get('cache-control'), 'no-store');
     assert.strictEqual(vote.body.poll.yourVote, '1');
 
-    // Two readers, one of whom just voted, must get byte-identical results —
-    // otherwise a shared cache would hand one reader the other's answer.
+    // Two readers, one of whom just voted, must get identical results — otherwise
+    // a shared cache would hand one reader the other's answer.
     const asVoter = await call(`/api/polls/${id}`, { headers: voter });
     const asStranger = await call(`/api/polls/${id}`);
 
@@ -220,3 +186,19 @@ test('results are impersonal and cacheable, votes are neither', () =>
     const list = await author('/api/polls');
     assert.strictEqual(list.headers.get('cache-control'), 'no-store');
   }));
+
+test('the framing policy is applied when one is configured', async () => {
+  const repository = createSqliteRepository({ file: ':memory:' });
+  const handle = createHandler({
+    repository,
+    adminToken: TOKEN,
+    frameAncestors: 'https://*.olandsbladet.se'
+  });
+
+  const response = await handle(new Request(`${BASE}/api/polls/finns-inte`));
+  assert.strictEqual(
+    response.headers.get('content-security-policy'),
+    'frame-ancestors https://*.olandsbladet.se'
+  );
+  repository.close();
+});

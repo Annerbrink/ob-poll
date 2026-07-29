@@ -1,6 +1,6 @@
 'use strict';
 
-const { CHOICES } = require('./repository');
+const { CHOICES } = require('./choices');
 
 /**
  * Percentages rounded with the largest-remainder method, so the three numbers
