@@ -188,7 +188,7 @@
 
   .poll-item p { margin: 0; font-size: .75rem; color: var(--color-text-secondary); }
 
-  .poll-actions { display: flex; flex-wrap: wrap; gap: .625rem; justify-content: flex-end; flex-shrink: 0; }
+  .poll-actions { display: flex; flex-wrap: wrap; gap: .375rem; justify-content: flex-end; flex-shrink: 0; }
 
   .link {
     border: 0;
@@ -203,6 +203,39 @@
   }
 
   .link:hover { text-decoration: underline; }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid var(--color-surface-moderate);
+    border-radius: var(--radius-button);
+    background: var(--color-surface-page);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color .12s ease, background .12s ease, color .12s ease, transform .06s ease;
+  }
+
+  .icon-btn:hover {
+    border-color: var(--color-theme-primary);
+    background: var(--color-theme-tertiary);
+    color: var(--color-theme-primary);
+  }
+
+  .icon-btn:active { transform: translateY(1px); }
+  .icon-btn:focus-visible { outline: 2px solid var(--color-theme-primary); outline-offset: 2px; }
+
+  .icon-btn.danger:hover {
+    border-color: #d73c3c;
+    background: color-mix(in srgb, #d73c3c 12%, transparent);
+    color: #d73c3c;
+  }
+
+  .icon-btn svg { width: 1.125rem; height: 1.125rem; }
 
   .notice { font-size: .8125rem; margin: .75rem 0 0; }
 
@@ -599,6 +632,46 @@
     return OB_TIME.format(value, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) || null;
   }
 
+  // Phosphor Icons (regular, MIT) inlined as paths so the view stays self-contained.
+  var ICON_PATHS = {
+    eye: 'M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z',
+    external: 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z',
+    edit: 'M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z',
+    copy: 'M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z',
+    trash: 'M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z'
+  };
+
+  function iconSvg(name) {
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 256 256');
+    svg.setAttribute('fill', 'currentColor');
+    svg.setAttribute('aria-hidden', 'true');
+    var path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', ICON_PATHS[name]);
+    svg.appendChild(path);
+    return svg;
+  }
+
+  /** An icon-only action button/link with an accessible label and tooltip. */
+  function iconAction(name, label, onClick) {
+    var isLink = typeof onClick === 'object';
+    var node = document.createElement(isLink ? 'a' : 'button');
+    node.className = 'icon-btn' + (name === 'trash' ? ' danger' : '');
+    node.setAttribute('aria-label', label);
+    node.title = label;
+    node.appendChild(iconSvg(name));
+    if (isLink) {
+      node.href = onClick.href;
+      node.target = '_blank';
+      node.rel = 'noopener';
+    } else {
+      node.type = 'button';
+      node.addEventListener('click', onClick);
+    }
+    return node;
+  }
+
   /** An inline editor for one poll; the id and its votes are left untouched. */
   function buildEditForm(poll, onSaved) {
     var form = document.createElement('form');
@@ -733,9 +806,7 @@
 
       var state = pollStatus(poll);
       var kickoff = formatDate(poll.kickoff);
-      var stats = '1: ' + poll.percentages['1'] + ' % · X: ' + poll.percentages.X +
-        ' % · 2: ' + poll.percentages['2'] + ' % · ' + poll.total +
-        (poll.total === 1 ? ' röst' : ' röster');
+      var stats = poll.total + (poll.total === 1 ? ' röst' : ' röster');
 
       var info = document.createElement('div');
       var heading = document.createElement('div');
@@ -755,36 +826,11 @@
 
       var editForm = buildEditForm(poll, function () { showToast('Ändringar sparade'); loadPolls(); });
 
-      var show = document.createElement('button');
-      show.type = 'button';
-      show.className = 'link';
-      show.textContent = 'Förhandsvisa & kod';
-      show.addEventListener('click', function () { showPollPanels(poll); });
-
-      var open = document.createElement('a');
-      open.className = 'link';
-      open.textContent = 'Visa i ny flik';
-      open.href = 'widget.html?poll=' + encodeURIComponent(poll.id);
-      open.target = '_blank';
-      open.rel = 'noopener';
-
-      var edit = document.createElement('button');
-      edit.type = 'button';
-      edit.className = 'link';
-      edit.textContent = 'Redigera';
-      edit.addEventListener('click', function () { editForm.hidden = !editForm.hidden; });
-
-      var duplicate = document.createElement('button');
-      duplicate.type = 'button';
-      duplicate.className = 'link';
-      duplicate.textContent = 'Duplicera';
-      duplicate.addEventListener('click', function () { duplicatePoll(poll); });
-
-      var remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'link';
-      remove.textContent = 'Ta bort';
-      remove.addEventListener('click', function () {
+      var show = iconAction('eye', 'Förhandsvisa & kod', function () { showPollPanels(poll); });
+      var open = iconAction('external', 'Visa i ny flik', { href: 'widget.html?poll=' + encodeURIComponent(poll.id) });
+      var edit = iconAction('edit', 'Redigera', function () { editForm.hidden = !editForm.hidden; });
+      var duplicate = iconAction('copy', 'Duplicera', function () { duplicatePoll(poll); });
+      var remove = iconAction('trash', 'Ta bort', function () {
         if (!confirm('Ta bort omröstningen och alla röster?')) return;
         api('/api/polls/' + encodeURIComponent(poll.id), { method: 'DELETE' })
           .then(function () { showToast('Omröstning borttagen'); loadPolls(); });
