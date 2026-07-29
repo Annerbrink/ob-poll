@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { createRepository } = require('../src/repository');
+const { createRepository, CHOICES } = require('../src/repository');
 const { createApp } = require('../src/app');
 const { toPercentages } = require('../src/results');
 
@@ -92,7 +92,7 @@ test('results survive a restart because they live in the data layer', () => {
   first.close();
 
   const second = createRepository({ file });
-  assert.deepStrictEqual(second.getTally(poll.id), { 1: 0, X: 1, 2: 0 });
+  assert.deepStrictEqual(second.getPoll(poll.id).counts, { 1: 0, X: 1, 2: 0 });
   assert.strictEqual(second.getPoll(poll.id).homeTeam, 'Hammarby');
   second.close();
 
@@ -154,3 +154,36 @@ test('an invalid choice is rejected', () => withServer(async ({ call, author }) 
   });
   assert.strictEqual(bad.status, 400);
 }));
+
+test('the stored tally matches a recount however the votes move', () => {
+  const repository = createRepository({ file: ':memory:' });
+  const poll = repository.createPoll({ homeTeam: 'IFK Borgholm', awayTeam: 'Rälla IF' });
+  const voters = Array.from({ length: 12 }, (unused, index) => String(index).padStart(32, '0'));
+
+  voters.forEach((voterId, index) => {
+    repository.castVote({ pollId: poll.id, voterId, choice: CHOICES[index % 3] });
+  });
+
+  // Readers change their minds, some more than once, some back to where they started.
+  repository.castVote({ pollId: poll.id, voterId: voters[0], choice: '2' });
+  repository.castVote({ pollId: poll.id, voterId: voters[0], choice: 'X' });
+  repository.castVote({ pollId: poll.id, voterId: voters[1], choice: '1' });
+  repository.castVote({ pollId: poll.id, voterId: voters[1], choice: '1' });
+  repository.castVote({ pollId: poll.id, voterId: voters[7], choice: '1' });
+
+  const stored = repository.getPoll(poll.id).counts;
+  assert.deepStrictEqual(stored, repository.recount(poll.id));
+  assert.strictEqual(stored['1'] + stored.X + stored['2'], voters.length);
+  repository.close();
+});
+
+test('deleting a poll takes its votes with it', () => {
+  const repository = createRepository({ file: ':memory:' });
+  const poll = repository.createPoll({ homeTeam: 'GAIS', awayTeam: 'Utsiktens BK' });
+  repository.castVote({ pollId: poll.id, voterId: 'd'.repeat(32), choice: '1' });
+
+  assert.strictEqual(repository.deletePoll(poll.id), true);
+  assert.strictEqual(repository.getPoll(poll.id), null);
+  assert.deepStrictEqual(repository.recount(poll.id), { 1: 0, X: 0, 2: 0 });
+  repository.close();
+});

@@ -84,10 +84,11 @@ function createApp({ repository, adminToken, frameAncestors = null }) {
   });
 
   app.get('/api/polls', requireAuthor, (req, res) => {
-    const polls = repository.listPolls().map(poll => {
-      const counts = repository.getTally(poll.id);
-      return { ...present(poll, counts, null), createdBy: poll.createdBy, createdAt: poll.createdAt };
-    });
+    const polls = repository.listPolls().map(poll => ({
+      ...present(poll, null),
+      createdBy: poll.createdBy,
+      createdAt: poll.createdAt
+    }));
     res.json({ polls });
   });
 
@@ -105,7 +106,7 @@ function createApp({ repository, adminToken, frameAncestors = null }) {
     const voterId = resolveVoterId(req, res);
     res.json({
       voterId,
-      poll: present(poll, repository.getTally(poll.id), repository.getVote({ pollId: poll.id, voterId }))
+      poll: present(poll, repository.getVote({ pollId: poll.id, voterId }))
     });
   });
 
@@ -126,7 +127,7 @@ function createApp({ repository, adminToken, frameAncestors = null }) {
 
     res.json({
       voterId,
-      poll: present(poll, repository.getTally(poll.id), choice)
+      poll: present(repository.getPoll(poll.id), choice)
     });
   });
 

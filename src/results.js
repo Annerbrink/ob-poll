@@ -28,7 +28,8 @@ function isClosed(poll, now = new Date()) {
 }
 
 /** The public shape of a poll, as served to the widget. */
-function present(poll, counts, yourVote) {
+function present(poll, yourVote) {
+  const counts = poll.counts;
   const total = CHOICES.reduce((sum, choice) => sum + counts[choice], 0);
   return {
     id: poll.id,

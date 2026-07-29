@@ -5,7 +5,15 @@ CREATE TABLE IF NOT EXISTS polls (
   kickoff     TEXT,
   closes_at   TEXT,
   created_by  TEXT,
-  created_at  TEXT NOT NULL
+  created_at  TEXT NOT NULL,
+
+  -- Running tally, kept in step with the votes table inside the same
+  -- transaction. Reading a result is then one row instead of a scan over
+  -- every vote, which is what keeps the poll inside a metered database's
+  -- row-read budget however popular the match gets.
+  count_1     INTEGER NOT NULL DEFAULT 0,
+  count_x     INTEGER NOT NULL DEFAULT 0,
+  count_2     INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS votes (

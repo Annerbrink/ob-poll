@@ -50,14 +50,22 @@ All läsning och skrivning går genom `src/repository.js`, som är den enda modu
 känner till databasen. Standardimplementationen är SQLite (`data/polls.db`) med två
 tabeller enligt `src/schema.sql`:
 
-- `polls` – id, lagnamn, avspark, stängningstid, skapad av, skapad när
+- `polls` – id, lagnamn, avspark, stängningstid, skapad av, skapad när samt en löpande
+  rösträkning (`count_1`, `count_x`, `count_2`)
 - `votes` – en rad per läsare och omröstning (`PRIMARY KEY (poll_id, voter_id)`), så en
   läsare som ändrar sig flyttar sin röst i stället för att lägga till en ny
 
+Rösträkningen ligger i `polls`-raden och uppdateras i samma transaktion som rösten
+skrivs. Att läsa ett resultat blir därmed en rad i stället för en genomsökning av
+varje röst – det är skillnaden mellan att rymmas och att inte rymmas i radbudgeten hos
+en databas som tar betalt per läst rad, hur populär matchen än blir. `recount()` bygger
+om siffrorna från rösterna och används i testerna och vid behov av reparation.
+
 Ska omröstningarna ligga i tidningens egen databas i stället byter man ut
-`createRepository()` mot en implementation med samma sju metoder – `createPoll`,
-`getPoll`, `listPolls`, `deletePoll`, `castVote`, `getVote` och `getTally`. Inget
-annat i koden rör lagringen.
+`createRepository()` mot en implementation med samma sex metoder – `createPoll`,
+`getPoll`, `listPolls`, `deletePoll`, `castVote` och `getVote`. Inget annat i koden rör
+lagringen. En databas som skapades innan rösträkningen fanns får kolumnerna tillagda och
+ifyllda automatiskt vid start.
 
 ## API
 
@@ -95,5 +103,6 @@ npm test
 ```
 
 Täcker procentavrundning, skapande av omröstning, att en ändrad röst flyttas i stället
-för att räknas dubbelt, att resultat överlever en omstart, stängd omröstning samt
-behörighets- och valideringsfel.
+för att räknas dubbelt, att den lagrade rösträkningen stämmer med en omräkning hur
+rösterna än flyttas, att resultat överlever en omstart, att en borttagen omröstning tar
+sina röster med sig, stängd omröstning samt behörighets- och valideringsfel.
