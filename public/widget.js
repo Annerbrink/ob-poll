@@ -23,7 +23,6 @@
     kickoff: document.getElementById('kickoff'),
     status: document.getElementById('status'),
     choices: document.getElementById('choices'),
-    results: document.getElementById('results'),
     tally: document.getElementById('tally'),
     summary: document.getElementById('summary'),
     thanks: document.getElementById('thanks'),
@@ -32,7 +31,6 @@
 
   var thanksTimer = null;
 
-  var rows = {};
   var labels = { '1': '', X: 'Oavgjort', '2': '' };
   var CATEGORY_LABELS = { herr: 'Herr', dam: 'Dam' };
 
@@ -157,18 +155,6 @@
     });
   }
 
-  function buildRows() {
-    CHOICES.forEach(function (choice) {
-      var row = document.createElement('div');
-      row.className = 'row';
-      row.innerHTML =
-        '<div class="row-head"><span class="name"></span><span class="count"></span></div>' +
-        '<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div></div>';
-      el.results.appendChild(row);
-      rows[choice] = row;
-    });
-  }
-
   function formatKickoff(poll) {
     var formatted = OB_TIME.format(poll.kickoff, {
       weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
@@ -230,27 +216,21 @@
 
     var leadChoice = poll.closed ? leader(poll) : null;
 
+    // The three buttons are the whole result: before a vote they show 1/X/2, and
+    // once the reader has voted (or voting closed) the big sign becomes the percentage.
+    var revealed = Boolean(mine) || poll.closed;
+
     CHOICES.forEach(function (choice) {
-      var row = rows[choice];
       var percent = poll.percentages[choice];
-      var count = poll.counts[choice];
-
-      row.classList.toggle('mine', mine === choice);
-      row.classList.toggle('winner', leadChoice === choice);
-      row.querySelector('.name').textContent = choice + ' · ' + labels[choice];
-      row.querySelector('.fill').style.width = percent + '%';
-      row.querySelector('.count').textContent = count + (count === 1 ? ' röst' : ' röster');
-
-      var track = row.querySelector('.track');
-      track.setAttribute('aria-valuenow', percent);
-      track.setAttribute('aria-valuetext', labels[choice] + ': ' + percent + ' %');
-
       var button = el.choices.querySelector('.choice[data-choice="' + choice + '"]');
       var isMine = mine === choice;
-      // Once the reader has voted (or voting closed), the big sign becomes the result.
-      button.querySelector('.sign').textContent = (mine || poll.closed) ? percent + ' %' : choice;
+
+      button.querySelector('.sign').textContent = revealed ? percent + ' %' : choice;
+      button.classList.toggle('winner', poll.closed && leadChoice === choice);
       button.setAttribute('aria-pressed', isMine ? 'true' : 'false');
-      button.setAttribute('aria-label', isMine ? 'Ta bort din röst på ' + labels[choice] : 'Rösta på ' + labels[choice]);
+      button.setAttribute('aria-label', isMine
+        ? 'Ta bort din röst på ' + labels[choice] + (revealed ? ' (' + percent + ' %)' : '')
+        : 'Rösta på ' + labels[choice] + (revealed ? ' (' + percent + ' %)' : ''));
       if (isMine && !poll.closed) button.title = 'Tryck igen för att ta bort din röst';
       else button.removeAttribute('title');
       button.disabled = poll.closed;
@@ -416,13 +396,11 @@
   }
 
   if (previewMode) {
-    buildRows();
     render(previewPoll());
     window.addEventListener('resize', reportHeight);
   } else if (!pollId) {
     showError('Ingen omröstning angiven.');
   } else {
-    buildRows();
     loadTurnstileConfig();
     load();
     startRefreshing();

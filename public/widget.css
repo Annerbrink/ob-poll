@@ -181,42 +181,15 @@ h1 {
 
 .choice[aria-pressed="true"] .team { color: inherit; }
 
-.results { margin-top: 1.25rem; display: grid; gap: .75rem; }
-
-.row-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: .75rem;
-  margin-bottom: .3125rem;
-  font-size: .8125rem;
+/* Once voting closes, the most-picked option keeps the accent even though every
+   button is disabled, so the outcome stays legible. */
+.choice.winner {
+  border-color: var(--color-theme-primary);
+  background: var(--color-theme-tertiary);
 }
 
-.row-head .name { font-weight: 600; }
-.row-head .count { font-size: .75rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-
-.track {
-  height: .5rem;
-  border-radius: var(--radius-button-themed);
-  background: var(--color-surface-subtle);
-  overflow: hidden;
-}
-
-.fill {
-  height: 100%;
-  width: 0;
-  border-radius: var(--radius-button-themed);
-  background: color-mix(in srgb, var(--color-theme-primary) 32%, var(--color-surface-subtle));
-  transition: width .45s cubic-bezier(.22, .61, .36, 1);
-}
-
-/* The reader's own pick, and the winner once voting closes, get the full accent. */
-.row.mine .fill,
-.row.winner .fill {
-  background: linear-gradient(90deg, var(--color-theme-secondary), var(--color-theme-primary));
-}
-
-.row.mine .row-head .name { color: var(--color-theme-secondary); }
+.choice.winner .sign { color: var(--color-theme-primary); }
+.choice.winner:disabled { opacity: 1; }
 
 footer {
   margin-top: 1.25rem;
@@ -231,23 +204,7 @@ footer p { margin: 0; }
 
 .error { color: #d73c3c; font-weight: 600; }
 
-.thanks {
-  display: inline-block;
-  margin-top: .5rem;
-  padding: .1875rem .5625rem;
-  border-radius: var(--radius-button-themed);
-  background: var(--color-theme-tertiary);
-  color: var(--color-theme-secondary);
-  font-size: .6875rem;
-  font-weight: 700;
-}
-
-/* The option most readers picked, once voting has closed. */
-.row.winner .row-head .name::after {
-  content: "★";
-  margin-left: .375rem;
-  color: var(--color-theme-primary);
-}
+.thanks { color: var(--color-theme-secondary); font-weight: 700; }
 
 /* Reserve the widget's rough height while loading, so the article doesn't jump. */
 .skeleton { display: grid; gap: 1rem; }
@@ -268,7 +225,7 @@ footer p { margin: 0; }
 .sk-eyebrow { width: 40%; }
 .sk-title { width: 75%; height: 1.5rem; }
 .sk-choices { height: 4.25rem; border-radius: var(--radius-surface); }
-.sk-bar { height: 2.25rem; }
+.sk-footer { width: 55%; }
 
 @keyframes sk-shimmer {
   0% { background-position: 100% 0; }
@@ -286,7 +243,7 @@ footer p { margin: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fill, .choice, .sk { transition: none; animation: none; }
+  .choice, .sk { transition: none; animation: none; }
 }
 
 [hidden] { display: none !important; }

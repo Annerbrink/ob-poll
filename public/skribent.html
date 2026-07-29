@@ -250,6 +250,7 @@
   }
 
   #token-panel { max-width: 30rem; }
+  .token-hint { margin: 0 0 .625rem; font-size: .75rem; }
 
   .password-field { position: relative; }
   .password-field input { padding-right: 2.75rem; }
@@ -344,9 +345,9 @@
 
   <div class="panel" id="token-panel">
     <h2>Lösenord</h2>
-    <label for="token">Token <span class="hint">(sparas lokalt i den här webbläsaren)</span></label>
+    <p class="hint token-hint">Sparas lokalt i den här webbläsaren.</p>
     <div class="password-field">
-      <input id="token" type="password" autocomplete="off" placeholder="ADMIN_TOKEN">
+      <input id="token" type="password" autocomplete="off" placeholder="ADMIN_TOKEN" aria-label="Lösenord">
       <button type="button" id="token-toggle" class="reveal" aria-label="Visa lösenord"></button>
     </div>
     <p class="notice error" id="token-error" hidden></p>
