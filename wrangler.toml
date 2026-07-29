@@ -1,26 +1,13 @@
 name = "ob-poll"
 compatibility_date = "2026-01-29"
 
-# Static files in public/, Pages Functions in functions/. This is a Pages
-# project rather than a plain Worker specifically so it can sit on its own
-# CNAME on a domain whose DNS lives outside this Cloudflare account — the same
-# trick min-ekonomi uses. A Worker needs the whole zone on Cloudflare; Pages
-# only needs one CNAME record pointed at it.
+# Static files in public/, Pages Functions in functions/.
 [assets]
 directory = "./public"
 
-# Skapad med `npx wrangler d1 create ob-poll --location weur`. Id:t pekar bara ut
-# databasen — åtkomsten ligger i kontots credentials, inte här.
+# Database binding for Cloudflare D1
 [[d1_databases]]
 binding = "DB"
 database_name = "ob-poll"
 database_id = "ca58cede-c2a2-49ac-a43d-e2ca9740a2d8"
 migrations_dir = "migrations"
-
-# ADMIN_TOKEN is a secret, never put it here:
-#   npx wrangler pages secret put ADMIN_TOKEN
-#
-# FRAME_ANCESTORS decides who may embed the widget. Leave it out while testing,
-# set it before the poll goes into an article:
-# [vars]
-# FRAME_ANCESTORS = "https://*.olandsbladet.se"
