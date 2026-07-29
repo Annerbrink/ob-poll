@@ -34,6 +34,14 @@ var OB_TIME = (function () {
       return new Date(naive.getTime() - zoneOffsetMinutes(naive) * 60000).toISOString();
     },
 
+    /** ISO instant -> "2026-08-15T15:00" for a datetime-local field, in Swedish time. */
+    toInput: function (iso) {
+      if (!iso) return '';
+      var date = new Date(iso);
+      if (isNaN(date.getTime())) return '';
+      return new Date(date.getTime() + zoneOffsetMinutes(date) * 60000).toISOString().slice(0, 16);
+    },
+
     format: function (iso, options) {
       if (!iso) return '';
       var date = new Date(iso);

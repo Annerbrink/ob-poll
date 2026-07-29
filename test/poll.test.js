@@ -83,6 +83,48 @@ test('a poll carries its match type through to the reader', () => withApi(async 
   assert.strictEqual(untyped.body.poll.category, null);
 }));
 
+test('an author edits a poll without disturbing its id or votes', () => withApi(async ({ call, author }) => {
+  const created = await author('/api/polls', {
+    method: 'POST',
+    body: JSON.stringify({ homeTeam: 'Örgryte IS', awayTeam: 'GAIS', category: 'herr' })
+  });
+  const id = created.body.poll.id;
+
+  await call(`/api/polls/${id}/votes`, {
+    method: 'POST',
+    body: JSON.stringify({ choice: '1' }),
+    headers: { 'X-Voter-Id': 'a'.repeat(32) }
+  });
+
+  const anonymous = await call(`/api/polls/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ homeTeam: 'X', awayTeam: 'Y' })
+  });
+  assert.strictEqual(anonymous.status, 401);
+
+  const updated = await author(`/api/polls/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ homeTeam: 'IFK Göteborg', awayTeam: 'BK Häcken', category: 'dam' })
+  });
+  assert.strictEqual(updated.status, 200);
+  assert.strictEqual(updated.body.poll.id, id);
+  assert.strictEqual(updated.body.poll.homeTeam, 'IFK Göteborg');
+  assert.strictEqual(updated.body.poll.category, 'dam');
+  assert.strictEqual(updated.body.poll.counts['1'], 1);
+
+  const missing = await author('/api/polls/finns-inte', {
+    method: 'PUT',
+    body: JSON.stringify({ homeTeam: 'A', awayTeam: 'B' })
+  });
+  assert.strictEqual(missing.status, 404);
+
+  const invalid = await author(`/api/polls/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ homeTeam: '  ', awayTeam: 'B' })
+  });
+  assert.strictEqual(invalid.status, 400);
+}));
+
 test('a reader changing their mind moves the vote instead of adding one', () =>
   withApi(async ({ call, author }) => {
     const { body } = await author('/api/polls', {

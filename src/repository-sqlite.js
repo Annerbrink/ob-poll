@@ -36,6 +36,12 @@ function createSqliteRepository({ file = path.join(__dirname, '..', 'data', 'pol
     `),
     selectPoll: db.prepare('SELECT * FROM polls WHERE id = ?'),
     selectPolls: db.prepare('SELECT * FROM polls ORDER BY created_at DESC LIMIT ?'),
+    updatePoll: db.prepare(`
+      UPDATE polls
+      SET home_team = @homeTeam, away_team = @awayTeam,
+          kickoff = @kickoff, closes_at = @closesAt, category = @category
+      WHERE id = @id
+    `),
     deletePoll: db.prepare('DELETE FROM polls WHERE id = ?'),
     upsertVote: db.prepare(`
       INSERT INTO votes (poll_id, voter_id, choice, created_at, updated_at)
@@ -87,6 +93,12 @@ function createSqliteRepository({ file = path.join(__dirname, '..', 'data', 'pol
     /** One row, tally included — no second query to count the votes. */
     async getPoll(id) {
       return toPoll(statements.selectPoll.get(id));
+    },
+
+    /** Edits the fixture without touching the id or the votes already cast. */
+    async updatePoll(id, { homeTeam, awayTeam, kickoff = null, closesAt = null, category = null }) {
+      const result = statements.updatePoll.run({ id, homeTeam, awayTeam, kickoff, closesAt, category });
+      return result.changes > 0 ? toPoll(statements.selectPoll.get(id)) : null;
     },
 
     async listPolls({ limit = 50 } = {}) {

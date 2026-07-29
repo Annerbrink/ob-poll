@@ -58,6 +58,22 @@ for (const [name, create] of implementations) {
     assert.strictEqual(stored['1'] + stored.X + stored['2'], voters.length);
   });
 
+  test(`${name}: editing a poll keeps its id, votes and tally`, async () => {
+    const repository = create();
+    const poll = await repository.createPoll({ homeTeam: 'AIK', awayTeam: 'Djurgården', category: 'herr' });
+    await repository.castVote({ pollId: poll.id, voterId: 'a'.repeat(32), choice: '1' });
+
+    const updated = await repository.updatePoll(poll.id, {
+      homeTeam: 'Hammarby', awayTeam: 'Malmö FF', category: 'dam', kickoff: null, closesAt: null
+    });
+
+    assert.strictEqual(updated.id, poll.id);
+    assert.strictEqual(updated.homeTeam, 'Hammarby');
+    assert.strictEqual(updated.category, 'dam');
+    assert.deepStrictEqual(updated.counts, { 1: 1, X: 0, 2: 0 });
+    assert.strictEqual(await repository.updatePoll('finns-inte', { homeTeam: 'A', awayTeam: 'B' }), null);
+  });
+
   test(`${name}: deleting a poll takes its votes with it`, async () => {
     const repository = create();
     const poll = await repository.createPoll({ homeTeam: 'GAIS', awayTeam: 'Utsiktens BK' });

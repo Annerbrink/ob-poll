@@ -46,6 +46,19 @@ function createD1Repository({ database }) {
       return toPoll(await database.prepare('SELECT * FROM polls WHERE id = ?').bind(id).first());
     },
 
+    /** Edits the fixture without touching the id or the votes already cast. */
+    async updatePoll(id, { homeTeam, awayTeam, kickoff = null, closesAt = null, category = null }) {
+      const result = await database
+        .prepare(`
+          UPDATE polls
+          SET home_team = ?, away_team = ?, kickoff = ?, closes_at = ?, category = ?
+          WHERE id = ?
+        `)
+        .bind(homeTeam, awayTeam, kickoff, closesAt, category, id)
+        .run();
+      return result.meta.changes > 0 ? this.getPoll(id) : null;
+    },
+
     async listPolls({ limit = 50 } = {}) {
       const { results } = await database
         .prepare('SELECT * FROM polls ORDER BY created_at DESC LIMIT ?')
