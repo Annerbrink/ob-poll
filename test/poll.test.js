@@ -197,6 +197,18 @@ test('poll creation requires the author token and valid input', () => withApi(as
   });
   assert.strictEqual(badDate.status, 400);
 
+  const closesBeforeKickoff = await author('/api/polls', {
+    method: 'POST',
+    body: JSON.stringify({
+      homeTeam: 'A',
+      awayTeam: 'B',
+      kickoff: '2026-08-15T15:00:00.000Z',
+      closesAt: '2026-08-15T14:00:00.000Z'
+    })
+  });
+  assert.strictEqual(closesBeforeKickoff.status, 400);
+  assert.match(closesBeforeKickoff.body.error, /före avspark/);
+
   const unknown = await call('/api/polls/finns-inte');
   assert.strictEqual(unknown.status, 404);
 }));
