@@ -73,6 +73,8 @@ body {
   font-size: .875rem;
   line-height: 1.45;
   padding: .5rem;
+  /* Inherited, so headings and short text wrap in balanced lines everywhere. */
+  text-wrap: balance;
 }
 
 .poll {
