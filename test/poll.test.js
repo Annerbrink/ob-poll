@@ -21,7 +21,7 @@ function withServer(run) {
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
     });
     const body = response.status === 204 ? null : await response.json();
-    return { status: response.status, body };
+    return { status: response.status, body, headers: response.headers };
   };
 
   const author = (path, options = {}) =>
@@ -187,3 +187,36 @@ test('deleting a poll takes its votes with it', () => {
   assert.deepStrictEqual(repository.recount(poll.id), { 1: 0, X: 0, 2: 0 });
   repository.close();
 });
+
+test('results are impersonal and cacheable, votes are neither', () =>
+  withServer(async ({ call, author }) => {
+    const { body } = await author('/api/polls', {
+      method: 'POST',
+      body: JSON.stringify({ homeTeam: 'IFK Borgholm', awayTeam: 'Rälla IF' })
+    });
+    const id = body.poll.id;
+    const voter = { 'X-Voter-Id': 'e'.repeat(32) };
+
+    const vote = await call(`/api/polls/${id}/votes`, {
+      method: 'POST',
+      body: JSON.stringify({ choice: '1' }),
+      headers: voter
+    });
+    assert.strictEqual(vote.headers.get('cache-control'), 'no-store');
+    assert.strictEqual(vote.body.poll.yourVote, '1');
+
+    // Two readers, one of whom just voted, must get byte-identical results —
+    // otherwise a shared cache would hand one reader the other's answer.
+    const asVoter = await call(`/api/polls/${id}`, { headers: voter });
+    const asStranger = await call(`/api/polls/${id}`);
+
+    assert.match(asVoter.headers.get('cache-control'), /^public, max-age=\d+/);
+    assert.strictEqual(asVoter.headers.get('set-cookie'), null);
+    assert.deepStrictEqual(asVoter.body, asStranger.body);
+    assert.strictEqual(asVoter.body.poll.yourVote, null);
+    assert.strictEqual(asVoter.body.poll.counts['1'], 1);
+
+    // The author's own view must never be cached — it sits behind a token.
+    const list = await author('/api/polls');
+    assert.strictEqual(list.headers.get('cache-control'), 'no-store');
+  }));

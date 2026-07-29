@@ -82,6 +82,19 @@ Skribentanropen kräver `Authorization: Bearer <ADMIN_TOKEN>`.
 Procenttalen räknas ut med största-resten-metoden, så de tre talen alltid summerar
 till exakt 100.
 
+### Trafik och cachning
+
+Resultatsvaret är avsiktligt opersonligt – ingen läsaridentitet, ingen cookie, inget som
+skiljer två läsare åt – och skickas med `public, max-age=15`. Därför kan det cachas både
+i webbläsaren och vid kanten, så en match som tar fart kostar ett ursprungsanrop per
+intervall i stället för ett per läsare. Vilket tecken läsaren själv valde ligger i
+`localStorage`, inte i svaret. Röstanropet och skribentvyn skickas med `no-store`.
+
+Widgeten hämtar nya siffror var sextionde sekund, pausar helt när fliken ligger i
+bakgrunden och slutar när omröstningen har stängt. Direkt efter att läsaren röstat
+hämtas resultatet förbi cachen i 25 sekunder, annars skulle en cachad ögonblicksbild
+från strax före rösten visa "Du tippade X · 0 röster".
+
 ## Design
 
 `public/widget.css` använder designtoken hämtade från olandsbladet.se (temat

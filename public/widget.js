@@ -2,7 +2,14 @@
 
 (function () {
   var CHOICES = ['1', 'X', '2'];
+  var REFRESH_MS = 60000;
+  // Comfortably longer than the results cache, so a stale copy can't outlive it.
+  var FRESH_AFTER_VOTE_MS = 25000;
+
   var pollId = new URLSearchParams(location.search).get('poll');
+  var timer = null;
+  var loading = false;
+  var closed = false;
 
   var el = {
     loading: document.getElementById('loading'),
@@ -19,16 +26,48 @@
   var labels = { '1': '', X: 'Oavgjort', '2': '' };
 
   /**
-   * The reader id lives in localStorage because third-party cookies are blocked
-   * in framed contexts; the server accepts it as a header and mirrors it back.
+   * Both the reader id and the sign they picked live in localStorage, because
+   * third-party cookies are blocked in framed contexts. Keeping the sign here
+   * rather than asking the server for it is also what keeps the results
+   * response identical for every reader, and therefore cacheable.
    */
-  function voterId(value) {
+  function stored(key, value) {
     try {
-      if (value) localStorage.setItem('voterId', value);
-      return localStorage.getItem('voterId');
+      if (value) localStorage.setItem(key, value);
+      return localStorage.getItem(key);
     } catch (e) {
       return value || null;
     }
+  }
+
+  function voterId() {
+    var id = stored('voterId');
+    if (id) return id;
+
+    var bytes = new Uint8Array(16);
+    (window.crypto || window.msCrypto).getRandomValues(bytes);
+    return stored('voterId', Array.prototype.map.call(bytes, function (byte) {
+      return ('0' + byte.toString(16)).slice(-2);
+    }).join(''));
+  }
+
+  function myVote(choice) {
+    if (choice) stored('voted-at:' + pollId, String(Date.now()));
+    return stored('vote:' + pollId, choice);
+  }
+
+  /**
+   * Results are cached for a few seconds, which is fine for everyone else's votes
+   * but not for the reader's own: a cached snapshot from just before they voted
+   * would tell them they picked X while showing nought votes. So for as long as
+   * a stale copy could still be in play, ask for an uncached one.
+   */
+  function resultsUrl() {
+    var votedAt = Number(stored('voted-at:' + pollId));
+    var path = '/api/polls/' + encodeURIComponent(pollId);
+    return votedAt && Date.now() - votedAt < FRESH_AFTER_VOTE_MS
+      ? path + '?sedan=' + votedAt
+      : path;
   }
 
   function request(path, options) {
@@ -36,14 +75,14 @@
     settings.headers = settings.headers || {};
     settings.headers['Content-Type'] = 'application/json';
 
-    var id = voterId();
-    if (id) settings.headers['X-Voter-Id'] = id;
-    settings.credentials = 'include';
+    if (settings.method === 'POST') {
+      settings.headers['X-Voter-Id'] = voterId();
+      settings.credentials = 'include';
+    }
 
     return fetch(path, settings).then(function (response) {
       return response.json().then(function (body) {
         if (!response.ok) throw new Error(body.error || 'Något gick fel');
-        if (body.voterId) voterId(body.voterId);
         return body;
       });
     });
@@ -70,8 +109,15 @@
   }
 
   function render(poll) {
+    var mine = poll.yourVote || myVote();
+
     labels['1'] = poll.homeTeam;
     labels['2'] = poll.awayTeam;
+
+    if (poll.closed) {
+      closed = true;
+      stopRefreshing();
+    }
 
     el.fixture.textContent = poll.homeTeam + ' – ' + poll.awayTeam;
     el.kickoff.textContent = formatKickoff(poll);
@@ -83,22 +129,22 @@
       var percent = poll.percentages[choice];
       var count = poll.counts[choice];
 
-      row.classList.toggle('mine', poll.yourVote === choice);
+      row.classList.toggle('mine', mine === choice);
       row.querySelector('.name').textContent = choice + ' · ' + labels[choice];
       row.querySelector('.pct').textContent = percent + ' %';
       row.querySelector('.fill').style.width = percent + '%';
       row.querySelector('.count').textContent = count + (count === 1 ? ' röst' : ' röster');
 
       var button = el.choices.querySelector('.choice[data-choice="' + choice + '"]');
-      button.setAttribute('aria-pressed', poll.yourVote === choice ? 'true' : 'false');
+      button.setAttribute('aria-pressed', mine === choice ? 'true' : 'false');
       button.disabled = poll.closed;
     });
 
     var votes = poll.total + (poll.total === 1 ? ' röst' : ' röster');
     if (poll.closed) {
       el.summary.textContent = 'Omröstningen är stängd · ' + votes;
-    } else if (poll.yourVote) {
-      el.summary.textContent = 'Du tippade ' + poll.yourVote + ' · ' + votes;
+    } else if (mine) {
+      el.summary.textContent = 'Du tippade ' + mine + ' · ' + votes;
     } else {
       el.summary.textContent = poll.total === 0
         ? 'Inga röster än – tippa 1, X eller 2'
@@ -135,14 +181,35 @@
       method: 'POST',
       body: JSON.stringify({ choice: button.dataset.choice })
     })
-      .then(function (body) { render(body.poll); })
+      .then(function (body) {
+        myVote(body.poll.yourVote);
+        render(body.poll);
+      })
       .catch(function (error) { showError(error.message); });
   });
 
   function load() {
-    return request('/api/polls/' + encodeURIComponent(pollId))
+    if (loading) return Promise.resolve();
+    loading = true;
+    return request(resultsUrl())
       .then(function (body) { render(body.poll); })
-      .catch(function (error) { showError(error.message); });
+      .catch(function (error) { showError(error.message); })
+      .then(function () { loading = false; });
+  }
+
+  /**
+   * An article can sit open in a background tab for hours, so the bars only
+   * refresh while someone is actually looking at them — and not at all once
+   * voting has closed and the numbers are final.
+   */
+  function startRefreshing() {
+    if (timer || closed) return;
+    timer = setInterval(load, REFRESH_MS);
+  }
+
+  function stopRefreshing() {
+    clearInterval(timer);
+    timer = null;
   }
 
   if (!pollId) {
@@ -150,8 +217,17 @@
   } else {
     buildRows();
     load();
-    // Keeps the bars fresh while the article is open.
-    setInterval(load, 15000);
+    startRefreshing();
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) {
+        stopRefreshing();
+      } else {
+        load();
+        startRefreshing();
+      }
+    });
+
     window.addEventListener('resize', reportHeight);
   }
 })();

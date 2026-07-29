@@ -8,6 +8,7 @@ const { CHOICES } = require('./repository');
 const { present, isClosed } = require('./results');
 
 const MAX_TEAM_LENGTH = 60;
+const RESULT_CACHE_SECONDS = 15;
 
 function createApp({ repository, adminToken, frameAncestors = null }) {
   const app = express();
@@ -27,6 +28,8 @@ function createApp({ repository, adminToken, frameAncestors = null }) {
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
   function requireAuthor(req, res, next) {
+    res.setHeader('Cache-Control', 'no-store');
+
     const header = req.get('authorization') || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
     if (!safeEqual(token, adminToken)) {
@@ -40,6 +43,9 @@ function createApp({ repository, adminToken, frameAncestors = null }) {
    * mirrored to a cookie. Third-party cookies are blocked in framed contexts on
    * most browsers, so the header is the one that actually carries across embeds.
    * It stops accidental double voting, not a determined ballot stuffer.
+   *
+   * Only the vote endpoint needs it. Results are the same for everyone, which is
+   * what lets them be cached.
    */
   function resolveVoterId(req, res) {
     const supplied = req.get('x-voter-id') || readCookie(req, 'voterId');
@@ -99,18 +105,26 @@ function createApp({ repository, adminToken, frameAncestors = null }) {
     res.status(204).end();
   });
 
+  /**
+   * Deliberately impersonal: no reader id, no cookie, nothing that varies between
+   * two readers. That is what makes it cacheable — at the edge as well as in the
+   * browser — so a match that takes off costs one origin request per interval
+   * rather than one per reader. The widget remembers the reader's own sign itself.
+   */
   app.get('/api/polls/:id', (req, res) => {
     const poll = repository.getPoll(req.params.id);
-    if (!poll) return res.status(404).json({ error: 'Omröstningen finns inte' });
+    if (!poll) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(404).json({ error: 'Omröstningen finns inte' });
+    }
 
-    const voterId = resolveVoterId(req, res);
-    res.json({
-      voterId,
-      poll: present(poll, repository.getVote({ pollId: poll.id, voterId }))
-    });
+    res.setHeader('Cache-Control', `public, max-age=${RESULT_CACHE_SECONDS}, stale-while-revalidate=30`);
+    res.json({ poll: present(poll, null) });
   });
 
   app.post('/api/polls/:id/votes', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+
     const poll = repository.getPoll(req.params.id);
     if (!poll) return res.status(404).json({ error: 'Omröstningen finns inte' });
 
