@@ -4,6 +4,20 @@
 
 import { withFramePolicy } from '../src/api.js';
 
-export async function onRequest({ next, env }) {
-  return withFramePolicy(await next(), env.FRAME_ANCESTORS || null);
+export async function onRequest({ request, next, env }) {
+  const frameAncestors = env.FRAME_ANCESTORS || null;
+
+  try {
+    return withFramePolicy(await next(), frameAncestors);
+  } catch (error) {
+    // An unhandled error would otherwise surface as Cloudflare's HTML error page,
+    // which the widget and the author view can't parse. API callers get JSON.
+    console.error(error);
+    if (!new URL(request.url).pathname.startsWith('/api/')) throw error;
+
+    return withFramePolicy(new Response(
+      JSON.stringify({ error: 'Något gick fel' }),
+      { status: 500, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } }
+    ), frameAncestors);
+  }
 }
