@@ -64,6 +64,8 @@ kör det för hand efter varje ändring av `migrations/`.
 | --- | --- | --- |
 | `ADMIN_TOKEN` | slumpas lokalt vid start | Token som krävs för att skapa och ta bort omröstningar. På Cloudflare en secret. |
 | `FRAME_ANCESTORS` | – | Vilka domäner som får bädda in widgeten, t.ex. `https://*.olandsbladet.se`. |
+| `TURNSTILE_SITE_KEY` | – | Publik Turnstile-nyckel. Sätts båda Turnstile-variablerna kräver varje röst en giltig Turnstile-token; lämnas de tomma är röstningen oförändrad. |
+| `TURNSTILE_SECRET` | – | Hemlig Turnstile-nyckel (på Cloudflare en secret). Verifieras mot Cloudflares `siteverify`. |
 | `PORT` | `3000` | Bara lokalt. |
 | `DATABASE_FILE` | `data/polls.db` | Bara lokalt. |
 
@@ -158,6 +160,14 @@ på systemets sans-serif.
 Läsaren identifieras med ett slumpat id i `localStorage`, som speglas till en cookie.
 Det hindrar dubbelröstning av misstag, men inte någon som medvetet rensar sin lagring.
 Behövs starkare spärr får `resolveVoterId()` i `src/api.js` knytas till inloggat konto.
+
+För publicerade omröstningar finns valfritt **Cloudflare Turnstile**: skapa en
+Turnstile-widget i Cloudflare och sätt `TURNSTILE_SITE_KEY` (publik) och
+`TURNSTILE_SECRET` (Pages secret). Då hämtar widgeten nyckeln via `GET /api/config`,
+kör en oftast osynlig kontroll och skickar en token med varje röst som servern
+verifierar mot `siteverify`. Utan nycklarna är beteendet exakt som förut, så koden kan
+ligga ute innan Turnstile aktiveras. Som ytterligare skydd kan en Cloudflare Rate
+Limiting-regel läggas på `/api/polls/*/votes` i dashboarden – det kräver ingen kod.
 
 ## Tester
 

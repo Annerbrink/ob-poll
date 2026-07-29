@@ -98,6 +98,57 @@
     });
   }
 
+  /**
+   * Optional bot protection: only active when the deployment has a Turnstile site
+   * key. Without one, tokenFor() resolves null and voting works exactly as before.
+   */
+  var turnstile = { siteKey: '', widgetId: null, pending: null };
+
+  function loadTurnstileConfig() {
+    return request('/api/config')
+      .then(function (config) { if (config && config.turnstileSiteKey) setupTurnstile(config.turnstileSiteKey); })
+      .catch(function () {});
+  }
+
+  function setupTurnstile(siteKey) {
+    turnstile.siteKey = siteKey;
+    var script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = function () {
+      if (!window.turnstile) return;
+      turnstile.widgetId = window.turnstile.render('#turnstile', {
+        sitekey: siteKey,
+        size: 'invisible',
+        callback: function (token) { settleTurnstile(token); },
+        'error-callback': function () { settleTurnstile(null); }
+      });
+    };
+    document.head.appendChild(script);
+  }
+
+  function settleTurnstile(token) {
+    if (turnstile.pending) { turnstile.pending(token); turnstile.pending = null; }
+  }
+
+  /** Resolves with a fresh Turnstile token, or null when protection is off/unavailable. */
+  function turnstileToken() {
+    if (!turnstile.siteKey || !window.turnstile || turnstile.widgetId === null) {
+      return Promise.resolve(null);
+    }
+    return new Promise(function (resolve) {
+      var timer = setTimeout(function () { settleTurnstile(null); }, 8000);
+      turnstile.pending = function (token) { clearTimeout(timer); resolve(token); };
+      try {
+        window.turnstile.reset(turnstile.widgetId);
+        window.turnstile.execute(turnstile.widgetId);
+      } catch (error) {
+        settleTurnstile(null);
+      }
+    });
+  }
+
   function buildRows() {
     CHOICES.forEach(function (choice) {
       var row = document.createElement('div');
@@ -239,10 +290,16 @@
       return;
     }
 
-    request('/api/polls/' + encodeURIComponent(pollId) + '/votes', {
-      method: 'POST',
-      body: JSON.stringify({ choice: button.dataset.choice })
-    })
+    var choice = button.dataset.choice;
+    turnstileToken()
+      .then(function (token) {
+        var payload = { choice: choice };
+        if (token) payload.turnstileToken = token;
+        return request('/api/polls/' + encodeURIComponent(pollId) + '/votes', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+      })
       .then(function (body) {
         myVote(body.poll.yourVote);
         render(body.poll);
@@ -336,6 +393,7 @@
     showError('Ingen omröstning angiven.');
   } else {
     buildRows();
+    loadTurnstileConfig();
     load();
     startRefreshing();
 

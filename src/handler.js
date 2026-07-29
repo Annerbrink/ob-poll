@@ -7,12 +7,16 @@ const { createApi, withFramePolicy } = require('./api');
  * reached through the files in functions/, which Pages maps to paths for us —
  * this is the one place where the two deployments differ.
  */
-function createHandler({ repository, adminToken, frameAncestors = null }) {
-  const api = createApi({ repository, adminToken });
+function createHandler({ repository, adminToken, frameAncestors = null, turnstileSiteKey = '', turnstileSecret = '' }) {
+  const api = createApi({ repository, adminToken, turnstileSiteKey, turnstileSecret });
 
   async function route(request) {
     const { pathname } = new URL(request.url);
     const method = request.method;
+
+    if (pathname === '/api/config') {
+      return method === 'GET' ? api.getConfig() : api.methodNotAllowed();
+    }
 
     if (pathname === '/api/polls') {
       const denied = api.requireAuthor(request);
