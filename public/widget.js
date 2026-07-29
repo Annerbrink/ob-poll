@@ -249,6 +249,8 @@
 
       var button = el.choices.querySelector('.choice[data-choice="' + choice + '"]');
       var isMine = mine === choice;
+      // Once the reader has voted (or voting closed), the big sign becomes the result.
+      button.querySelector('.sign').textContent = (mine || poll.closed) ? percent + ' %' : choice;
       button.setAttribute('aria-pressed', isMine ? 'true' : 'false');
       button.setAttribute('aria-label', isMine ? 'Ta bort din röst på ' + labels[choice] : 'Rösta på ' + labels[choice]);
       if (isMine && !poll.closed) button.title = 'Tryck igen för att ta bort din röst';
