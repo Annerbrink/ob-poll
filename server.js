@@ -28,7 +28,13 @@ const adminToken = process.env.ADMIN_TOKEN || randomToken();
 const frameAncestors = process.env.FRAME_ANCESTORS || null;
 
 const repository = createSqliteRepository({ file: process.env.DATABASE_FILE });
-const handle = createHandler({ repository, adminToken, frameAncestors });
+const handle = createHandler({
+  repository,
+  adminToken,
+  frameAncestors,
+  turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || '',
+  turnstileSecret: process.env.TURNSTILE_SECRET || ''
+});
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);

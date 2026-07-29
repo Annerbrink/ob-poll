@@ -10,6 +10,8 @@ import { createD1Repository } from '../../src/repository-d1.js';
 export function apiFor({ env }) {
   return createApi({
     repository: createD1Repository({ database: env.DB }),
-    adminToken: env.ADMIN_TOKEN || ''
+    adminToken: env.ADMIN_TOKEN || '',
+    turnstileSiteKey: env.TURNSTILE_SITE_KEY || '',
+    turnstileSecret: env.TURNSTILE_SECRET || ''
   });
 }

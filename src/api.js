@@ -17,13 +17,23 @@ const CATEGORIES = ['herr', 'dam'];
  * request was routed — functions/ maps paths to these, src/handler.js does the
  * same for the local server.
  */
-function createApi({ repository, adminToken }) {
+function createApi({ repository, adminToken, turnstileSiteKey = '', turnstileSecret = '' }) {
   return {
     /** Returns a 401 response when the caller is not an author, otherwise null. */
     requireAuthor(request) {
       const header = request.headers.get('authorization') || '';
       const token = header.startsWith('Bearer ') ? header.slice(7) : '';
       return safeEqual(token, adminToken) ? null : json(401, { error: 'Skribenttoken krävs' });
+    },
+
+    /**
+     * Public, tokenless config the widget needs before it can render — currently
+     * only the Turnstile site key. Empty when no bot protection is configured.
+     */
+    getConfig() {
+      return json(200, { turnstileSiteKey }, {
+        'Cache-Control': `public, max-age=${RESULT_CACHE_SECONDS}`
+      });
     },
 
     async createPoll(request) {
@@ -90,6 +100,15 @@ function createApi({ repository, adminToken }) {
       }
       if (isClosed(poll)) {
         return json(409, { error: 'Omröstningen är stängd för den här matchen' });
+      }
+
+      // Only enforced when a secret is configured, so local and unprotected
+      // deployments keep working exactly as before.
+      if (turnstileSecret) {
+        const ip = request.headers.get('cf-connecting-ip');
+        if (!await verifyTurnstile(turnstileSecret, body.turnstileToken, ip)) {
+          return json(403, { error: 'Verifieringen misslyckades, ladda om och försök igen' });
+        }
       }
 
       const voterId = resolveVoterId(request);
@@ -202,6 +221,29 @@ function cleanTimestamp(value) {
   if (value === undefined || value === null || value === '') return null;
   const date = new Date(value);
   return isNaN(date.getTime()) ? false : date.toISOString();
+}
+
+/**
+ * Verifies a Cloudflare Turnstile token against the siteverify endpoint. Any
+ * missing token, network hiccup or unparseable answer counts as a failure, so a
+ * configured poll never lets a vote through unchecked.
+ */
+async function verifyTurnstile(secret, token, ip) {
+  if (!token || typeof token !== 'string') return false;
+
+  try {
+    const form = new URLSearchParams({ secret, response: token });
+    if (ip) form.set('remoteip', ip);
+
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: form
+    });
+    const result = await response.json();
+    return Boolean(result && result.success);
+  } catch (error) {
+    return false;
+  }
 }
 
 function readCookie(request, name) {

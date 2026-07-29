@@ -259,6 +259,53 @@ test('results are impersonal and cacheable, votes are neither', () =>
     assert.strictEqual(list.headers.get('cache-control'), 'no-store');
   }));
 
+test('a configured Turnstile secret gates votes, and the site key is public', async () => {
+  const repository = createSqliteRepository({ file: ':memory:' });
+  const handle = createHandler({
+    repository,
+    adminToken: TOKEN,
+    turnstileSiteKey: 'plats-nyckel',
+    turnstileSecret: 'sekret'
+  });
+
+  const call = (path, options = {}) => handle(new Request(BASE + path, {
+    method: options.method || 'GET',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, options.headers),
+    body: options.body
+  }));
+
+  const config = await (await call('/api/config')).json();
+  assert.strictEqual(config.turnstileSiteKey, 'plats-nyckel');
+
+  const created = await (await call('/api/polls', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${TOKEN}` },
+    body: JSON.stringify({ homeTeam: 'AIK', awayTeam: 'Djurgården' })
+  })).json();
+  const id = created.poll.id;
+
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => ({ json: async () => ({ success: false }) });
+    const rejected = await call(`/api/polls/${id}/votes`, {
+      method: 'POST',
+      body: JSON.stringify({ choice: '1', turnstileToken: 'bad' })
+    });
+    assert.strictEqual(rejected.status, 403);
+
+    globalThis.fetch = async () => ({ json: async () => ({ success: true }) });
+    const accepted = await call(`/api/polls/${id}/votes`, {
+      method: 'POST',
+      headers: { 'X-Voter-Id': 'a'.repeat(32) },
+      body: JSON.stringify({ choice: '1', turnstileToken: 'good' })
+    });
+    assert.strictEqual(accepted.status, 200);
+  } finally {
+    globalThis.fetch = realFetch;
+    repository.close();
+  }
+});
+
 test('the framing policy is applied when one is configured', async () => {
   const repository = createSqliteRepository({ file: ':memory:' });
   const handle = createHandler({
