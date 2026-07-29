@@ -7,14 +7,20 @@ läsare ser samma siffror.
 
 ## Två sätt att köra
 
-Samma kod kör på båda: `src/handler.js` är skriven mot webbplattformens `Request`
-och `Response`, och båda ingångarna ger den ett datalager.
+Samma kod kör på båda: `src/api.js` är skriven mot webbplattformens `Request` och
+`Response`, och båda ingångarna ger den ett datalager.
 
-| | Cloudflare Workers | Lokalt |
+| | Cloudflare Pages | Lokalt |
 | --- | --- | --- |
-| Ingång | `src/worker.js` | `server.js` |
+| Ingång | `functions/api/**` (Pages Functions) | `server.js` + `src/handler.js` |
 | Datalager | D1 (`src/repository-d1.js`) | SQLite-fil (`src/repository-sqlite.js`) |
-| Statiska filer | Workers Assets | inbyggd filserver |
+| Statiska filer | Pages, direkt från kanten | inbyggd filserver |
+
+Cloudflare-delen är ett **Pages**-projekt, inte en ren Worker. Anledningen är att
+Pages kan ligga på en egen CNAME på en domän vars DNS bor någon annanstans – en
+Worker kräver att hela zonen ligger i samma Cloudflare-konto. Det är samma knep
+`min-ekonomi` använder för att hamna på en undersida av en domän den inte äger DNS:en
+för.
 
 ### Lokalt
 
@@ -31,19 +37,26 @@ Sätts inte `ADMIN_TOKEN` genereras en tillfällig token som skrivs ut i loggen.
 ### Cloudflare
 
 ```bash
-npx wrangler d1 create ob-poll          # klistra in id:t i wrangler.toml
+npx wrangler d1 create ob-poll --location weur   # klistra in id:t i wrangler.toml
 npx wrangler d1 migrations apply ob-poll --remote
-npx wrangler secret put ADMIN_TOKEN
-npx wrangler deploy
+npx wrangler pages secret put ADMIN_TOKEN
+npx wrangler pages deploy
 ```
 
-Kör lokalt mot en riktig Worker och en lokal D1 med `npm run dev` – lägg då
+Kör lokalt mot en riktig Pages-miljö och en lokal D1 med `npm run dev` – lägg då
 `ADMIN_TOKEN=...` i `.dev.vars` (som inte checkas in) och kör
 `npx wrangler d1 migrations apply ob-poll --local` en gång.
 
-Widgeten och skribentvyn serveras av Workers Assets, alltså direkt från kanten:
-att öppna en artikel väcker aldrig workern, bara röstning och resultathämtning gör
-det. Sätt `FRAME_ANCESTORS` i `wrangler.toml` innan omröstningen läggs i en artikel.
+Widgeten och skribentvyn serveras statiskt av Pages, alltså direkt från kanten: att
+öppna en artikel väcker aldrig en funktion, bara röstning och resultathämtning gör
+det. Sätt `FRAME_ANCESTORS` som miljövariabel i projektet innan omröstningen läggs
+i en artikel – `functions/_middleware.js` sätter policyn på både API-svar och
+statiska filer.
+
+Deployar du via Cloudflares git-integration: bygg-kommandot kan lämnas tomt (inget
+byggsteg krävs) och bygg-utdatamappen ska vara `public`. Lägg
+`npx wrangler d1 migrations apply ob-poll --remote` som ett steg före deploy, eller
+kör det för hand efter varje ändring av `migrations/`.
 
 ### Miljövariabler
 
@@ -95,6 +108,11 @@ stället för en genomsökning av varje röst, vilket är skillnaden mellan att 
 att inte rymmas i D1:s radbudget hur populär matchen än blir. `recount()` bygger om
 siffrorna från rösterna om de någon gång behöver repareras.
 
+Räkningen ligger medvetet i D1 och inte i KV, till skillnad från `min-ekonomi`: KV:s
+läs-ändra-skriv utan lås tappar röster när två läsare röstar samtidigt, och är dessutom
+bara eventuellt konsistent. Det märks inte i `min-ekonomi` där varje användare bara rör
+sin egen nyckel, men skulle tappa röster här.
+
 Ska omröstningarna ligga i tidningens egen databas skriver man en tredje
 implementation med samma metoder. Inget annat i koden rör lagringen. En lokal databas
 som skapades innan rösträkningen fanns får kolumnerna tillagda och ifyllda vid start.
@@ -139,7 +157,7 @@ på systemets sans-serif.
 
 Läsaren identifieras med ett slumpat id i `localStorage`, som speglas till en cookie.
 Det hindrar dubbelröstning av misstag, men inte någon som medvetet rensar sin lagring.
-Behövs starkare spärr får `resolveVoterId()` i `src/app.js` knytas till inloggat konto.
+Behövs starkare spärr får `resolveVoterId()` i `src/api.js` knytas till inloggat konto.
 
 ## Tester
 
@@ -152,4 +170,4 @@ körd mot båda datalagren – att rösträkningen stämmer med en omräkning hu
 flyttas, att en borttagen omröstning tar sina röster med sig, och att resultat överlever
 en omstart. D1-implementationen testas mot en stand-in som talar D1:s API ovanpå SQLite,
 vilket provkör den riktiga SQL:en och batchningen men inte ersätter ett rökprov efter
-`wrangler deploy`.
+`wrangler pages deploy`.
