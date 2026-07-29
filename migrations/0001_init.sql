@@ -7,10 +7,6 @@ CREATE TABLE IF NOT EXISTS polls (
   created_by  TEXT,
   created_at  TEXT NOT NULL,
 
-  -- Whether the fixture is a men's ('herr') or women's ('dam') match, so the
-  -- widget can label it. NULL for polls created before the column existed.
-  category    TEXT,
-
   -- Running tally, kept in step with the votes table inside the same
   -- transaction. Reading a result is then one row instead of a scan over
   -- every vote, which is what keeps the poll inside a metered database's

@@ -4,17 +4,22 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const SCHEMA = path.join(__dirname, '..', 'migrations', '0001_init.sql');
+const MIGRATIONS = path.join(__dirname, '..', 'migrations');
 
 /**
  * A stand-in for a D1 binding: prepare/bind/first/all/run/batch on top of an
  * in-memory SQLite database. D1 is SQLite, so the SQL under test is the real
  * thing — what this cannot prove is how Cloudflare behaves in production, which
  * is what the smoke test after deploying is for.
+ *
+ * The migrations are applied in order, exactly as wrangler applies them to D1,
+ * so the double's schema stays in step with production's.
  */
 function fakeD1() {
   const db = new Database(':memory:');
-  db.exec(fs.readFileSync(SCHEMA, 'utf8'));
+  for (const file of fs.readdirSync(MIGRATIONS).filter(name => name.endsWith('.sql')).sort()) {
+    db.exec(fs.readFileSync(path.join(MIGRATIONS, file), 'utf8'));
+  }
 
   function prepare(sql) {
     const statement = db.prepare(sql);
