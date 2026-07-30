@@ -229,17 +229,6 @@
     color: var(--color-text-secondary);
   }
 
-  /* In the inline editor the date/time pickers are plain full-width fields
-     (no quick-pick chips), so they fill their column like the text inputs. */
-  .dt-input-block {
-    width: 100%;
-    field-sizing: normal;
-    height: auto;
-    padding: .625rem .75rem;
-    border-radius: var(--radius-button);
-    color: var(--color-text);
-  }
-
   /* Keep the value block from stretching to the field's full width, so the icon
      sits right after the value instead of far right (works without field-sizing,
      e.g. Safari). */
@@ -736,6 +725,18 @@
     return group;
   }
 
+  /** A pill row: left label + the native picker, matching the create form's
+      Datum/Avspark rows (but without quick-pick chips). */
+  function chipsRow(labelText, input) {
+    var row = document.createElement('div');
+    row.className = 'chips';
+    var label = document.createElement('span');
+    label.className = 'chips-label';
+    label.textContent = labelText;
+    row.append(label, input);
+    return row;
+  }
+
   var categoryGroup = document.getElementById('category');
   wireCategory(categoryGroup);
 
@@ -1135,43 +1136,41 @@
     var grid = document.createElement('div');
     grid.className = 'grid';
 
-    function field(labelText, control, full) {
+    function cell(control) {
       var wrap = document.createElement('div');
-      if (full) wrap.className = 'full';
-      var label = document.createElement('label');
-      label.textContent = labelText;
-      wrap.append(label, control);
+      wrap.appendChild(control);
       grid.appendChild(wrap);
-      return control;
     }
 
+    // Team names show only as placeholders (no labels above), like the create form.
     var home = document.createElement('input');
     home.maxLength = 60; home.required = true; home.value = poll.homeTeam;
-    field('Hemmalag', home);
+    home.placeholder = 'Hemmalag (1)'; home.setAttribute('aria-label', 'Hemmalag');
+    cell(home);
 
     var away = document.createElement('input');
     away.maxLength = 60; away.required = true; away.value = poll.awayTeam;
-    field('Bortalag', away);
+    away.placeholder = 'Bortalag (2)'; away.setAttribute('aria-label', 'Bortalag');
+    cell(away);
 
-    // Matchtyp as pills (its own label), full width — same as the create form.
-    var category = categoryControl(poll.category);
-    var catWrap = document.createElement('div');
-    catWrap.className = 'full';
-    catWrap.appendChild(category);
-    grid.appendChild(catWrap);
-
-    // Avspark as plain manual date + time pickers — no quick-pick chips here.
+    // Matchtyp/Datum/Avspark as pill rows (left label) in one .full — even spacing,
+    // same as the create form. Date/time are plain pills (no quick-pick chips).
     var dateInput = document.createElement('input');
-    dateInput.type = 'date'; dateInput.className = 'dt-input dt-input-block'; dateInput.required = true;
+    dateInput.type = 'date'; dateInput.className = 'dt-input'; dateInput.required = true;
+    dateInput.setAttribute('aria-label', 'Datum');
     var timeInput = document.createElement('input');
-    timeInput.type = 'time'; timeInput.className = 'dt-input dt-input-block'; timeInput.required = true;
+    timeInput.type = 'time'; timeInput.className = 'dt-input'; timeInput.required = true;
+    timeInput.setAttribute('aria-label', 'Avspark');
 
     var local = OB_TIME.toInput(poll.kickoff);
     dateInput.value = local ? local.slice(0, 10) : '';
     timeInput.value = local ? local.slice(11, 16) : '';
 
-    field('Datum', dateInput);
-    field('Avspark', timeInput);
+    var category = categoryControl(poll.category);
+    var full = document.createElement('div');
+    full.className = 'full';
+    full.append(category, chipsRow('Datum', dateInput), chipsRow('Avspark', timeInput));
+    grid.appendChild(full);
 
     var save = document.createElement('button');
     save.className = 'primary'; save.type = 'submit'; save.textContent = 'Spara';
