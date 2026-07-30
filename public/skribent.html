@@ -213,59 +213,55 @@
     color: var(--color-button-primary-foreground);
   }
 
-  /* The manual native picker, matched to the chips so the row sits level. */
+  /* Manual native date/time pickers, styled as filled pills. The calendar/clock
+     icon is a background-image on the input itself (not the webkit indicator,
+     which mobile Safari doesn't render for date/time inputs), so it shows in
+     every browser. */
   .dt-input {
     flex-shrink: 0;
-    /* Size to the value/placeholder so the calendar/clock icon sits right after
-       it instead of at the far right of the field's reserved digit width. */
+    /* width:auto to beat the generic `input { width: 100% }`; min-width keeps
+       room for the value plus the right-hand icon. */
     width: auto;
-    field-sizing: content;
     height: 2.25rem;
-    padding: 0 .8125rem;
+    min-width: 9.5rem;
+    padding: 0 2.375rem 0 .8125rem;
     border: 0;
     border-radius: var(--radius-button-themed);
-    background: var(--color-app-bg);
+    background-color: var(--color-app-bg);
+    background-repeat: no-repeat;
+    background-position: right .75rem center;
+    background-size: 1rem;
     font-size: .8125rem;
     color: var(--color-text-secondary);
   }
 
-  /* Keep the value block from stretching to the field's full width, so the icon
-     sits right after the value instead of far right (works without field-sizing,
-     e.g. Safari). */
-  .dt-input::-webkit-datetime-edit { flex: 0 1 auto; padding: 0; }
+  .dt-input[type="time"] { min-width: 7rem; }
 
-  /* Swap the native calendar/clock glyph for a Phosphor icon and pull it in
-     close to the value (webkit/blink; Firefox keeps its own control). */
-  .dt-input::-webkit-calendar-picker-indicator {
-    width: .9375rem;
-    height: .9375rem;
-    margin: 0 0 0 .1875rem;
-    padding: 0;
-    cursor: pointer;
-    background: center / contain no-repeat;
-  }
+  /* Keep the native indicator as the click target on desktop, but invisible so
+     it doesn't duplicate the background icon. */
+  .dt-input::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 
-  .dt-input[type="date"]::-webkit-calendar-picker-indicator {
+  .dt-input[type="date"] {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23505762'%3E%3Cpath d='M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z'/%3E%3C/svg%3E");
   }
 
-  .dt-input[type="time"]::-webkit-calendar-picker-indicator {
+  .dt-input[type="time"] {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23505762'%3E%3Cpath d='M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z'/%3E%3C/svg%3E");
   }
 
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .dt-input[type="date"]::-webkit-calendar-picker-indicator {
+    :root:not([data-theme]) .dt-input[type="date"] {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23e4e8ee'%3E%3Cpath d='M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z'/%3E%3C/svg%3E");
     }
-    :root:not([data-theme]) .dt-input[type="time"]::-webkit-calendar-picker-indicator {
+    :root:not([data-theme]) .dt-input[type="time"] {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23e4e8ee'%3E%3Cpath d='M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z'/%3E%3C/svg%3E");
     }
   }
 
-  :root[data-theme="dark"] .dt-input[type="date"]::-webkit-calendar-picker-indicator {
+  :root[data-theme="dark"] .dt-input[type="date"] {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23e4e8ee'%3E%3Cpath d='M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z'/%3E%3C/svg%3E");
   }
-  :root[data-theme="dark"] .dt-input[type="time"]::-webkit-calendar-picker-indicator {
+  :root[data-theme="dark"] .dt-input[type="time"] {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23e4e8ee'%3E%3Cpath d='M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z'/%3E%3C/svg%3E");
   }
 
