@@ -11,6 +11,14 @@
   // Renders straight from the query string without touching the API, so an
   // author can see the widget while still filling in the create form.
   var previewMode = params.get('preview') === '1';
+
+  // The author preview passes its chosen theme so the widget matches the toggle;
+  // a real embed omits it and follows the reader's system setting.
+  var themeParam = params.get('theme');
+  if (themeParam === 'light' || themeParam === 'dark') {
+    document.documentElement.setAttribute('data-theme', themeParam);
+  }
+
   var timer = null;
   var loading = false;
   var closed = false;

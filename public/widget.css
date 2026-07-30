@@ -43,9 +43,14 @@
   color-scheme: light dark;
 }
 
-/* Mirrors html.allow-dark-mode on the site: follows the reader's system setting. */
+/*
+ * Dark theme. Follows the reader's system setting by default (like the site's
+ * html.allow-dark-mode), but a `data-theme` attribute on <html> — set by the
+ * author view's theme toggle — overrides it in either direction. The tokens are
+ * repeated for the two triggers because a media query can't share a rule block.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --color-surface-page: #141414;
     --color-surface-minimal: #1f1f1f;
     --color-surface-subtle: #373a3f;
@@ -62,6 +67,24 @@
 
     --color-border: rgba(247, 249, 251, .14);
   }
+}
+
+:root[data-theme="dark"] {
+  --color-surface-page: #141414;
+  --color-surface-minimal: #1f1f1f;
+  --color-surface-subtle: #373a3f;
+  --color-surface-moderate: #505762;
+
+  --color-text: #f7f9fb;
+  --color-text-secondary: #e4e8ee;
+
+  --color-theme-primary: #64a3d0;
+  --color-theme-secondary: #9ac3ea;
+  --color-theme-tertiary: #1a334c;
+
+  --color-button-primary-foreground: #141414;
+
+  --color-border: rgba(247, 249, 251, .14);
 }
 
 * { box-sizing: border-box; }
