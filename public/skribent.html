@@ -39,6 +39,62 @@
     margin: 1.375rem 0;
   }
 
+  /* Heading with an info icon that reveals its help text on hover/focus. */
+  .with-info { display: flex; align-items: center; gap: .375rem; }
+
+  .info {
+    position: relative;
+    display: inline-flex;
+    color: var(--color-text-secondary);
+    cursor: help;
+  }
+
+  .info svg { width: 1rem; height: 1rem; }
+  .info:hover, .info:focus-visible { color: var(--color-theme-primary); outline: none; }
+
+  .info:hover::after, .info:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + .5rem);
+    left: 0;
+    z-index: 20;
+    width: max-content;
+    max-width: 16rem;
+    padding: .5rem .625rem;
+    border-radius: var(--radius-button);
+    background: var(--color-text);
+    color: var(--color-surface-page);
+    font-size: .75rem;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: normal;
+  }
+
+  /* Copy-code button tucked into the top-right of the embed field. */
+  .embed-field { position: relative; }
+  .embed-field textarea { padding-right: 2.75rem; }
+
+  .copy-btn {
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.875rem;
+    height: 1.875rem;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    background: var(--color-surface-page);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: border-color .12s ease, background .12s ease, color .12s ease;
+  }
+
+  .copy-btn:hover { border-color: var(--color-theme-primary); background: var(--color-theme-tertiary); color: var(--color-theme-primary); }
+  .copy-btn svg { width: 1rem; height: 1rem; }
+
   @media (max-width: 900px) {
     .layout { grid-template-columns: 1fr; }
     .col-side { position: static; }
@@ -101,8 +157,11 @@
     gap: .5rem;
     margin: 0 0 .625rem;
     overflow-x: auto;
-    padding-bottom: .25rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+
+  .chips::-webkit-scrollbar { display: none; }
 
   .chips-label {
     flex: 0 0 4rem;
@@ -477,17 +536,19 @@
 
      <div class="panel" id="side-card" hidden>
        <div id="preview-panel">
-         <h2>Förhandsvisning</h2>
-         <p class="lead" style="margin-bottom:12px">Så här ser widgeten ut. Klicka på ett alternativ för att testa – inga röster sparas.</p>
+         <h2 class="with-info">Förhandsvisning<span class="info" tabindex="0" role="img" aria-label="Så här ser widgeten ut. Klicka på ett alternativ för att testa – inga röster sparas." data-tip="Så här ser widgeten ut. Klicka på ett alternativ för att testa – inga röster sparas."><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"/></svg></span></h2>
          <iframe id="preview-frame" title="Förhandsvisning" loading="lazy"></iframe>
        </div>
 
        <div id="embed-panel" hidden>
          <hr class="side-divider">
-         <h2>Inbäddningskod</h2>
-         <p class="lead" style="margin-bottom:12px">Klistra in i artikelns HTML-block. Höjden anpassas automatiskt.</p>
-         <textarea id="embed-code" readonly></textarea>
-         <button class="primary" type="button" id="copy">Kopiera</button>
+         <h2 class="with-info">Inbäddningskod<span class="info" tabindex="0" role="img" aria-label="Klistra in i artikelns HTML-block. Höjden anpassas automatiskt." data-tip="Klistra in i artikelns HTML-block. Höjden anpassas automatiskt."><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z"/></svg></span></h2>
+         <div class="embed-field">
+           <textarea id="embed-code" readonly></textarea>
+           <button class="copy-btn" type="button" id="copy" aria-label="Kopiera kod" title="Kopiera">
+             <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></svg>
+           </button>
+         </div>
        </div>
      </div>
    </aside>
@@ -756,9 +817,7 @@
     var field = document.getElementById('embed-code');
     field.select();
     navigator.clipboard.writeText(field.value);
-    this.textContent = 'Kopierat!';
-    var button = this;
-    setTimeout(function () { button.textContent = 'Kopiera'; }, 1500);
+    showToast('Koden kopierad');
   });
 
   document.getElementById('create-form').addEventListener('submit', function (event) {
@@ -1077,6 +1136,7 @@
 
       var show = iconAction('eye', 'Förhandsvisa & kod', function () { showPollPanels(poll); });
       var open = iconAction('external', 'Visa i ny flik', { href: 'widget.html?poll=' + encodeURIComponent(poll.id) });
+      open.addEventListener('click', function () { showPollPanels(poll); });
       var edit = iconAction('edit', 'Redigera', function () { animateCard(editForm, editForm.hidden); });
       var duplicate = iconAction('copy', 'Duplicera', function () { duplicatePoll(poll); });
       var remove = iconAction('trash', 'Ta bort', function () {

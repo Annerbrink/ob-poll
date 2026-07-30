@@ -338,14 +338,16 @@
   var preview = null;
   function previewPoll() {
     if (!preview) {
+      var closes = params.get('closes');
       preview = {
         id: 'preview',
         homeTeam: params.get('home') || 'Hemmalag',
         awayTeam: params.get('away') || 'Bortalag',
         kickoff: params.get('kickoff') || null,
-        closesAt: params.get('closes') || null,
+        closesAt: closes || null,
         category: params.get('category') || null,
-        closed: false,
+        // Mirror the server's rule so a past kickoff previews as closed.
+        closed: Boolean(closes) && new Date(closes) <= new Date(),
         counts: { '1': 0, X: 0, '2': 0 },
         percentages: { '1': 0, X: 0, '2': 0 },
         total: 0,
