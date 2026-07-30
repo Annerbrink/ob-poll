@@ -121,30 +121,11 @@ body {
 }
 
 .poll {
-  position: relative;
-  overflow: hidden;
   max-width: 520px;
   margin: 0 auto;
   background: var(--color-card);
   border-radius: 1.25rem;
   padding: 1.625rem 1.5rem;
-}
-
-/* Team-colour accent: a slim gradient from the home team's colour (left, by
-   choice "1") to the away team's (right, by "2"). Falls back to the theme
-   colours until the teams — and their colours — are known. */
-.poll::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(
-    90deg,
-    var(--team-home, var(--color-theme-primary)),
-    var(--team-away, var(--color-theme-secondary))
-  );
 }
 
 .eyebrow {
@@ -244,21 +225,6 @@ h1 {
 }
 
 .choice[aria-pressed="true"] .team { color: inherit; }
-
-/* A small colour dot ties each side's button to its end of the gradient. */
-.choice[data-choice="1"] .team::before,
-.choice[data-choice="2"] .team::before {
-  content: "";
-  display: inline-block;
-  width: .4375rem;
-  height: .4375rem;
-  margin-right: .3125rem;
-  border-radius: 50%;
-  vertical-align: middle;
-  background: var(--team-home, var(--color-theme-primary));
-}
-
-.choice[data-choice="2"] .team::before { background: var(--team-away, var(--color-theme-secondary)); }
 
 /* Once voting closes, the most-picked option keeps the accent even though every
    button is disabled, so the outcome stays legible. */

@@ -162,20 +162,6 @@
     });
   }
 
-  /**
-   * A stable, reasonably distinct accent colour derived from a team's name, so
-   * the same team always reads with the same colour. Used only for the decorative
-   * home→away gradient, so contrast against text is not a concern.
-   */
-  function teamColor(name) {
-    var text = String(name || '');
-    var hash = 0;
-    for (var i = 0; i < text.length; i++) {
-      hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
-    }
-    return 'hsl(' + (hash % 360) + ', 64%, 52%)';
-  }
-
   function formatKickoff(poll) {
     var formatted = OB_TIME.format(poll.kickoff, {
       weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
@@ -219,11 +205,6 @@
 
     labels['1'] = poll.homeTeam;
     labels['2'] = poll.awayTeam;
-
-    // Each team lends its colour to the card's home→away gradient accent.
-    var pollEl = document.getElementById('poll');
-    pollEl.style.setProperty('--team-home', teamColor(poll.homeTeam));
-    pollEl.style.setProperty('--team-away', teamColor(poll.awayTeam));
 
     if (poll.closed) {
       closed = true;
