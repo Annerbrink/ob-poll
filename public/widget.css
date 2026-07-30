@@ -33,7 +33,8 @@
 
   --color-button-primary-foreground: #ffffff;
 
-  --radius-button: .125rem;
+  /* Corner scale: cards .75rem, controls .5rem (concentric inside cards), pills. */
+  --radius-button: .5rem;
   --radius-button-themed: 62.4375rem;
   --radius-surface: .75rem;
 
