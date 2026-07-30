@@ -166,6 +166,7 @@
     flex: 0 0 4rem;
     font-size: .75rem;
     font-weight: 700;
+    white-space: nowrap;
     color: var(--color-text-secondary);
   }
 
@@ -186,7 +187,9 @@
   }
 
   .chip:hover { border-color: var(--color-theme-primary); background: var(--color-theme-tertiary); }
-  .chip.active {
+  /* .active for date/time chips; aria-pressed for the Matchtyp toggle chips. */
+  .chip.active,
+  .chip[aria-pressed="true"] {
     border-color: var(--color-theme-primary);
     background: var(--color-theme-primary);
     color: var(--color-button-primary-foreground);
@@ -560,10 +563,10 @@
         <input id="away" required maxlength="60" placeholder="Bortalag (2)" aria-label="Bortalag">
       </div>
       <div class="full">
-        <label>Matchtyp</label>
-        <div class="segmented" id="category" role="group" aria-label="Matchtyp">
-          <button type="button" data-category="herr" aria-pressed="false">Herr</button>
-          <button type="button" data-category="dam" aria-pressed="false">Dam</button>
+        <div class="chips" id="category" role="group" aria-label="Matchtyp">
+          <span class="chips-label">Matchtyp</span>
+          <button type="button" class="chip" data-category="herr" aria-pressed="false">Herr</button>
+          <button type="button" class="chip" data-category="dam" aria-pressed="false">Dam</button>
         </div>
       </div>
       <div class="full">
