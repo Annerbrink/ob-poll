@@ -792,9 +792,59 @@
   categoryGroup.addEventListener('click', scheduleLivePreview);
 
   // Date/time quick-pick chips for the create form's avspark.
-  var KICKOFF_TIMES = ['13:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+  // The time suggestions learn from the author's earlier kickoff choices: the
+  // more often a time has been picked (weighted heavily for the same weekday),
+  // the higher it ranks. A stable set of common defaults keeps chips present
+  // before any history exists.
+  var DEFAULT_TIMES = ['13:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+  var TIME_HISTORY_KEY = 'ob-kickoff-times';
+  var MAX_TIME_CHIPS = 6;
 
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  function loadTimeHistory() {
+    try {
+      var data = JSON.parse(localStorage.getItem(TIME_HISTORY_KEY) || 'null');
+      if (!data || typeof data !== 'object') return { overall: {}, byWeekday: {} };
+      if (!data.overall || typeof data.overall !== 'object') data.overall = {};
+      if (!data.byWeekday || typeof data.byWeekday !== 'object') data.byWeekday = {};
+      return data;
+    } catch (e) { return { overall: {}, byWeekday: {} }; }
+  }
+
+  /** Records a chosen kickoff time so future suggestions reflect the pattern. */
+  function recordKickoffTime(time, weekday) {
+    if (!/^\d{2}:\d{2}$/.test(time || '')) return;
+    var data = loadTimeHistory();
+    data.overall[time] = (data.overall[time] || 0) + 1;
+    if (weekday != null) {
+      var wd = data.byWeekday[weekday] || (data.byWeekday[weekday] = {});
+      wd[time] = (wd[time] || 0) + 1;
+    }
+    try { localStorage.setItem(TIME_HISTORY_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  /** The weekday (0–6) of an ISO date value, or null if none/invalid. */
+  function weekdayFor(dateValue) {
+    var parts = (dateValue || '').split('-');
+    if (parts.length !== 3) return null;
+    var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return isNaN(d.getTime()) ? null : d.getDay();
+  }
+
+  /** Ranks candidate times by learned frequency, weighting the picked weekday
+      heaviest, and falls back to the common defaults so chips are never empty. */
+  function rankedTimes(weekday) {
+    var data = loadTimeHistory();
+    var wd = (weekday != null && data.byWeekday[weekday]) || {};
+    var scores = {};
+    DEFAULT_TIMES.forEach(function (t) { scores[t] = 0; });
+    Object.keys(data.overall).forEach(function (t) { scores[t] = (scores[t] || 0) + data.overall[t]; });
+    Object.keys(wd).forEach(function (t) { scores[t] = (scores[t] || 0) + wd[t] * 3; });
+    return Object.keys(scores).sort(function (a, b) {
+      return (scores[b] - scores[a]) || (a < b ? -1 : a > b ? 1 : 0);
+    }).slice(0, MAX_TIME_CHIPS);
+  }
 
   function syncChips(container, value) {
     container.querySelectorAll('.chip').forEach(function (chip) {
@@ -816,20 +866,31 @@
     return chip;
   }
 
-  /** Builds "next 8 days" + common-times chips into the containers, wired to the inputs. */
+  /** Rebuilds the time chips ranked for the currently picked date's weekday,
+      keeping the native input and label in place. */
+  function renderTimeChips(container, input, dateInput, onChange) {
+    container.querySelectorAll('.chip').forEach(function (chip) { chip.remove(); });
+    rankedTimes(weekdayFor(dateInput.value)).forEach(function (time) {
+      container.appendChild(makeChip(time, time, input, container, onChange));
+    });
+    syncChips(container, input.value);
+  }
+
+  /** Builds "next 8 days" + smart-time chips into the containers, wired to the inputs. */
   function setupKickoffChips(dateContainer, dateInput, timeContainer, timeInput, onChange) {
+    var reRankTimes = function () { renderTimeChips(timeContainer, timeInput, dateInput, onChange); };
+    var onDateChange = function () { reRankTimes(); if (onChange) onChange(); };
+
     var today = new Date();
     for (var i = 0; i < 8; i++) {
       var d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
       var value = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
       var label = i === 0 ? 'Idag' : i === 1 ? 'Imorgon'
         : d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
-      dateContainer.appendChild(makeChip(label, value, dateInput, dateContainer, onChange));
+      dateContainer.appendChild(makeChip(label, value, dateInput, dateContainer, onDateChange));
     }
-    KICKOFF_TIMES.forEach(function (time) {
-      timeContainer.appendChild(makeChip(time, time, timeInput, timeContainer, onChange));
-    });
-    dateInput.addEventListener('input', function () { syncChips(dateContainer, dateInput.value); if (onChange) onChange(); });
+    reRankTimes();
+    dateInput.addEventListener('input', function () { syncChips(dateContainer, dateInput.value); onDateChange(); });
     timeInput.addEventListener('input', function () { syncChips(timeContainer, timeInput.value); if (onChange) onChange(); });
   }
 
@@ -870,6 +931,9 @@
       return;
     }
 
+    var chosenTime = kickoffTime.value;
+    var chosenWeekday = weekdayFor(kickoffDate.value);
+
     api('/api/polls', {
       method: 'POST',
       body: JSON.stringify({
@@ -880,9 +944,11 @@
       })
     })
       .then(function (body) {
+        recordKickoffTime(chosenTime, chosenWeekday);
         event.target.reset();
         clearCategory();
         clearChips();
+        renderTimeChips(timeChips, kickoffTime, kickoffDate, scheduleLivePreview);
         showPollPanels(body.poll);
         showToast('Omröstning skapad');
         loadPolls();
@@ -949,7 +1015,7 @@
     kickoffDate.value = local ? local.slice(0, 10) : '';
     kickoffTime.value = local ? local.slice(11, 16) : '';
     syncChips(dateChips, kickoffDate.value);
-    syncChips(timeChips, kickoffTime.value);
+    renderTimeChips(timeChips, kickoffTime, kickoffDate, scheduleLivePreview);
     document.getElementById('create-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.getElementById('home').focus();
     showToast('Uppgifterna kopierades – ändra och skapa');
