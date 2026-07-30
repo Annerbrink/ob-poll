@@ -119,7 +119,9 @@
 
 * { box-sizing: border-box; }
 
-html, body { margin: 0; background: var(--color-surface-page); }
+/* Transparent so the single card floats on whatever hosts it (article or the
+   author preview panel) instead of painting its own darker backdrop band. */
+html, body { margin: 0; background: transparent; }
 
 body {
   color: var(--color-text);
@@ -154,8 +156,8 @@ body {
 .eyebrow .category {
   padding: .1875rem .5rem;
   border-radius: var(--radius-button-themed);
-  background: var(--color-theme-tertiary);
-  color: var(--color-theme-secondary);
+  background: var(--color-raised);
+  color: var(--color-text-secondary);
   letter-spacing: .05em;
   font-size: .625rem;
 }
@@ -208,6 +210,7 @@ h1 {
 }
 
 .choice:hover:not(:disabled) {
+  border-color: var(--color-theme-primary);
   background: var(--color-raised-hover);
 }
 
