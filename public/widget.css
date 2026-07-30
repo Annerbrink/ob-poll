@@ -24,6 +24,12 @@
   --color-surface-subtle: #eef1f5;
   --color-surface-moderate: #e4e8ee;
 
+  /* Borderless elevation: the card sits above the backdrop, controls above the
+     card — separation comes from tone, not outlines. */
+  --color-card: #f4f6f9;
+  --color-raised: #ffffff;
+  --color-raised-hover: #eef2f7;
+
   --color-text: #1f1f1f;
   --color-text-secondary: #505762;
 
@@ -59,6 +65,10 @@
     --color-surface-subtle: #373a3f;
     --color-surface-moderate: #505762;
 
+    --color-card: #202124;
+    --color-raised: #2c2d31;
+    --color-raised-hover: #35363b;
+
     --color-text: #f7f9fb;
     --color-text-secondary: #e4e8ee;
 
@@ -78,6 +88,10 @@
   --color-surface-minimal: #1f1f1f;
   --color-surface-subtle: #373a3f;
   --color-surface-moderate: #505762;
+
+  --color-card: #202124;
+  --color-raised: #2c2d31;
+  --color-raised-hover: #35363b;
 
   --color-text: #f7f9fb;
   --color-text-secondary: #e4e8ee;
@@ -111,10 +125,9 @@ body {
   overflow: hidden;
   max-width: 520px;
   margin: 0 auto;
-  background: var(--color-surface-page);
-  border: 1px solid var(--color-border);
-  border-radius: 1.125rem;
-  padding: 1.5rem 1.375rem;
+  background: var(--color-card);
+  border-radius: 1.25rem;
+  padding: 1.625rem 1.5rem;
 }
 
 /* Team-colour accent: a slim gradient from the home team's colour (left, by
@@ -192,10 +205,10 @@ h1 {
   flex-direction: column;
   align-items: center;
   gap: .3125rem;
-  padding: 1.0625rem .375rem;
-  border: 1px solid transparent;
-  border-radius: .875rem;
-  background: var(--color-surface-minimal);
+  padding: 1.125rem .375rem;
+  border: 1.5px solid transparent;
+  border-radius: 1rem;
+  background: var(--color-raised);
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -203,8 +216,7 @@ h1 {
 }
 
 .choice:hover:not(:disabled) {
-  border-color: var(--color-theme-primary);
-  background: var(--color-theme-tertiary);
+  background: var(--color-raised-hover);
 }
 
 .choice:active:not(:disabled) { transform: translateY(1px); }
