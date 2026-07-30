@@ -18,6 +18,17 @@ function createHandler({ repository, adminToken, frameAncestors = null, turnstil
       return method === 'GET' ? api.getConfig() : api.methodNotAllowed();
     }
 
+    if (pathname === '/api/oembed') {
+      return method === 'GET' ? api.oembed(request) : api.methodNotAllowed();
+    }
+
+    const pollPage = pathname.match(/^\/p\/([^/]+)$/);
+    if (pollPage) {
+      return method === 'GET'
+        ? api.pollPage(request, decodeURIComponent(pollPage[1]))
+        : api.methodNotAllowed();
+    }
+
     if (pathname === '/api/polls') {
       const denied = api.requireAuthor(request);
       if (denied) return denied;

@@ -2,6 +2,7 @@
 
 const { CHOICES } = require('./choices');
 const { present, isClosed } = require('./results');
+const { pollIdFromUrl, originOf, oembedPayload, pollPageHtml } = require('./embed');
 
 const MAX_TEAM_LENGTH = 60;
 const RESULT_CACHE_SECONDS = 15;
@@ -132,6 +133,54 @@ function createApi({ repository, adminToken, turnstileSiteKey = '', turnstileSec
 
       return json(200, { voterId, poll: present(await repository.getPoll(poll.id), null) }, {
         'Set-Cookie': `voterId=${voterId}; Path=/; Max-Age=31536000; SameSite=None; Secure`
+      });
+    },
+
+    /**
+     * oEmbed provider — lets a CMS that only accepts links turn a pasted poll
+     * link into the live widget. Returns the same iframe the author can copy by
+     * hand, so both embedding paths share one source of truth.
+     */
+    async oembed(request) {
+      const url = new URL(request.url);
+      const format = url.searchParams.get('format');
+      if (format && format !== 'json') {
+        return new Response('Endast JSON stöds', { status: 501, headers: { 'Cache-Control': 'no-store' } });
+      }
+
+      const target = url.searchParams.get('url');
+      const id = target && pollIdFromUrl(target);
+      if (!id) return json(400, { error: 'Ogiltig eller saknad url-parameter' });
+
+      const poll = await repository.getPoll(id);
+      if (!poll) return json(404, { error: 'Omröstningen finns inte' });
+
+      const payload = oembedPayload(originOf(target, url.origin), poll, {
+        maxwidth: Number(url.searchParams.get('maxwidth')) || 0,
+        maxheight: Number(url.searchParams.get('maxheight')) || 0
+      });
+      return json(200, payload, {
+        'Cache-Control': 'public, max-age=300',
+        'Access-Control-Allow-Origin': '*'
+      });
+    },
+
+    /**
+     * The canonical poll page an editor links to. Carries the oEmbed discovery
+     * link and Open Graph tags, and shows the poll itself when opened directly.
+     */
+    async pollPage(request, id) {
+      const origin = new URL(request.url).origin;
+      const poll = await repository.getPoll(id);
+      if (!poll) {
+        return new Response('Omröstningen finns inte', {
+          status: 404,
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
+        });
+      }
+      return new Response(pollPageHtml(origin, poll), {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' }
       });
     },
 

@@ -39,7 +39,7 @@ const handle = createHandler({
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
-  if (url.pathname.startsWith('/api/')) {
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/p/')) {
     toWebRequest(req, url)
       .then(handle)
       .then(response => send(res, response))
