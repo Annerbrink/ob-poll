@@ -409,7 +409,6 @@
         </div>
         <div class="form-actions create-actions">
           <button class="primary" type="submit">Skapa omröstning</button>
-          <button class="secondary" type="button" id="preview">Förhandsvisa</button>
         </div>
       </div>
     </div>
@@ -418,11 +417,11 @@
 
   <div class="panel" id="batch-panel">
     <h2>Skapa flera (omgång)</h2>
-    <label for="batch-fixtures">Matcher <span class="hint">(en per rad: Hemmalag – Bortalag)</span></label>
-    <textarea id="batch-fixtures" rows="4" placeholder="Örgryte IS – GAIS&#10;AIK – Djurgården"></textarea>
+    <label for="batch-fixtures">Matcher <span class="hint">(en per rad: Hemmalag – Bortalag, valfritt (dam)/(herr) sist)</span></label>
+    <textarea id="batch-fixtures" rows="4" placeholder="Örgryte IS – GAIS&#10;Rosengård – BK Häcken (dam)"></textarea>
     <div class="grid">
       <div class="full">
-        <label>Matchtyp</label>
+        <label>Matchtyp <span class="hint">(standard för rader utan markering)</span></label>
         <div class="segmented" id="batch-category" role="group" aria-label="Matchtyp">
           <button type="button" data-category="herr" aria-pressed="false">Herr</button>
           <button type="button" data-category="dam" aria-pressed="false">Dam</button>
@@ -640,17 +639,27 @@
 
   var previewFrame = document.getElementById('preview-frame');
 
-  function showPreview(url) {
-    previewFrame.src = url;
+  /** Live preview of the poll being filled in — updates as the form changes. */
+  function livePreview() {
+    var home = document.getElementById('home').value.trim();
+    var away = document.getElementById('away').value.trim();
+    if (!home && !away) return;
+    previewFrame.src = previewUrl();
     document.getElementById('embed-panel').hidden = true;
     document.getElementById('side-hint').hidden = true;
     animateCard(document.getElementById('side-card'), true);
-    document.getElementById('side-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  document.getElementById('preview').addEventListener('click', function () {
-    showPreview(previewUrl());
+  var liveTimer = null;
+  function scheduleLivePreview() {
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(livePreview, 300);
+  }
+
+  ['home', 'away', 'kickoff'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', scheduleLivePreview);
   });
+  categoryGroup.addEventListener('click', scheduleLivePreview);
 
   // The preview iframe resizes itself the same way an embedded widget does.
   window.addEventListener('message', function (event) {
@@ -706,20 +715,32 @@
   var batchCategory = document.getElementById('batch-category');
   wireCategory(batchCategory);
 
-  /** Parses "Hemmalag – Bortalag" lines into fixtures; reports unparseable row numbers. */
+  /**
+   * Parses "Hemmalag – Bortalag" lines into fixtures; reports unparseable row
+   * numbers. A trailing "(dam)"/"(herr)" overrides the shared match type, so an
+   * omgång can mix both.
+   */
   function parseFixtures(text) {
     var fixtures = [];
     var errors = [];
     text.split('\n').forEach(function (raw, index) {
       var line = raw.trim();
       if (!line) return;
+
+      var category = null;
+      var marker = line.match(/\((herr|dam)\)\s*$/i);
+      if (marker) {
+        category = marker[1].toLowerCase();
+        line = line.slice(0, marker.index).trim();
+      }
+
       var parts = line.split(/\s+[–-]\s+/);
       var home = (parts[0] || '').trim();
       var away = (parts[1] || '').trim();
       if (parts.length !== 2 || !home || !away) {
         errors.push(index + 1);
       } else {
-        fixtures.push({ homeTeam: home, awayTeam: away });
+        fixtures.push({ homeTeam: home, awayTeam: away, category: category });
       }
     });
     return { fixtures: fixtures, errors: errors };
@@ -748,7 +769,7 @@
       return;
     }
 
-    var category = categoryValue(batchCategory);
+    var defaultCategory = categoryValue(batchCategory);
     var created = 0;
 
     // Sequentially, so a whole round doesn't hammer the API at once.
@@ -759,7 +780,7 @@
           body: JSON.stringify({
             homeTeam: fixture.homeTeam,
             awayTeam: fixture.awayTeam,
-            category: category,
+            category: fixture.category || defaultCategory,
             kickoff: kickoffIso
           })
         }).then(function () { created += 1; }, function () {});
