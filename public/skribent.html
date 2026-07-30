@@ -149,16 +149,13 @@
 
   .form-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
 
-  /* Manual date/time first, then quick-pick chips — one row that scrolls sideways.
-     overflow-x also clips vertically, so the vertical padding (cancelled by the
-     negative margin) gives the chips' :active press-shift room instead of clipping. */
+  /* Manual date/time first, then quick-pick chips — one row that scrolls sideways. */
   .chips {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     gap: .5rem;
-    margin: -.125rem 0 .5rem;
-    padding: .125rem 0;
+    margin: 0 0 .625rem;
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -190,7 +187,6 @@
   }
 
   .chip:hover { border-color: var(--color-theme-primary); background: var(--color-theme-tertiary); }
-  .chip:active { transform: translateY(1px); }
   .chip.active {
     border-color: var(--color-theme-primary);
     background: var(--color-theme-primary);
