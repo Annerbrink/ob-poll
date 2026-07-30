@@ -157,7 +157,7 @@ body {
 .eyebrow .category {
   padding: .1875rem .5rem;
   border-radius: var(--radius-button-themed);
-  background: var(--color-raised);
+  background: var(--color-surface-moderate);
   color: var(--color-text-secondary);
   letter-spacing: .05em;
   font-size: .625rem;
