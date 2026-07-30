@@ -145,13 +145,16 @@
 
   .form-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
 
-  /* Manual date/time first, then quick-pick chips — one row that scrolls sideways. */
+  /* Manual date/time first, then quick-pick chips — one row that scrolls sideways.
+     overflow-x also clips vertically, so the vertical padding (cancelled by the
+     negative margin) gives focus rings room instead of clipping them. */
   .chips {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     gap: .5rem;
-    margin: 0 0 .625rem;
+    margin: -.375rem 0 .25rem;
+    padding: .375rem 0;
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -347,6 +350,15 @@
     right: 0;
     height: 1px;
     background: var(--color-border);
+    transition: opacity .12s ease;
+  }
+
+  /* Fade the dividers touching a hovered row (its own top line and the next
+     row's top line) so the rounded hover background doesn't clash with them —
+     opacity keeps the layout from jumping. */
+  .poll-item:hover::before,
+  .poll-item:hover + .poll-item::before {
+    opacity: 0;
   }
 
   .poll-item:hover { background: var(--color-surface-minimal); }
