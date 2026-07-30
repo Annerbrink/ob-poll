@@ -40,6 +40,8 @@
 
   /* Subtle, semi-transparent outline used for all neutral borders. */
   --color-border: rgba(31, 31, 31, .12);
+  /* Stronger outline for interactive pills/chips so they stay legible. */
+  --color-border-strong: rgba(31, 31, 31, .32);
 
   color-scheme: light dark;
 }
@@ -67,6 +69,7 @@
     --color-button-primary-foreground: #141414;
 
     --color-border: rgba(247, 249, 251, .14);
+    --color-border-strong: rgba(247, 249, 251, .32);
   }
 }
 
@@ -86,6 +89,7 @@
   --color-button-primary-foreground: #141414;
 
   --color-border: rgba(247, 249, 251, .14);
+  --color-border-strong: rgba(247, 249, 251, .32);
 }
 
 * { box-sizing: border-box; }
