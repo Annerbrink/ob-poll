@@ -30,6 +30,11 @@
   --color-raised: #ffffff;
   --color-raised-hover: #eef2f7;
 
+  /* Author view: a greyer page backdrop so the white panels read as cards
+     without outlines. */
+  --color-app-bg: #eceff4;
+  --color-panel: #ffffff;
+
   --color-text: #1f1f1f;
   --color-text-secondary: #505762;
 
@@ -69,6 +74,9 @@
     --color-raised: #2c2d31;
     --color-raised-hover: #35363b;
 
+    --color-app-bg: #0b0b0d;
+    --color-panel: #17181b;
+
     --color-text: #f7f9fb;
     --color-text-secondary: #e4e8ee;
 
@@ -92,6 +100,9 @@
   --color-card: #202124;
   --color-raised: #2c2d31;
   --color-raised-hover: #35363b;
+
+  --color-app-bg: #0b0b0d;
+  --color-panel: #17181b;
 
   --color-text: #f7f9fb;
   --color-text-secondary: #e4e8ee;
