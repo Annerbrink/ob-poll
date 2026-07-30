@@ -89,8 +89,16 @@
 
   .form-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
 
-  /* Quick-pick chips for date and time, with a native input as the catch-all. */
-  .chips { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0 0 .625rem; }
+  /* Manual date/time first, then quick-pick chips — one row that scrolls sideways. */
+  .chips {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 .625rem;
+    overflow-x: auto;
+    padding-bottom: .25rem;
+  }
 
   .chips-label {
     flex: 0 0 3.25rem;
@@ -100,6 +108,7 @@
   }
 
   .chip {
+    flex-shrink: 0;
     padding: .4375rem .8125rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-button-themed);
@@ -120,8 +129,9 @@
     font-weight: 700;
   }
 
-  /* The catch-all native picker, sized to sit level with the chips. */
+  /* The manual native picker, sized to sit level with the chips. */
   .dt-input {
+    flex-shrink: 0;
     width: auto;
     padding: .375rem .5rem;
     border-radius: var(--radius-button-themed);
@@ -300,8 +310,6 @@
   #token-panel { max-width: 30rem; }
   .token-hint { margin: 0 0 .625rem; font-size: .75rem; }
 
-  #batch-fixtures { font-family: inherit; font-size: .875rem; background: var(--color-surface-page); min-height: 5rem; margin-bottom: 1rem; }
-
   .password-field { position: relative; }
   .password-field input { padding-right: 2.75rem; }
 
@@ -407,12 +415,10 @@
     <h2>Ny omröstning</h2>
     <div class="grid">
       <div>
-        <label for="home">Hemmalag <span class="hint">(1)</span></label>
-        <input id="home" required maxlength="60" placeholder="Färjestadens GoIF">
+        <input id="home" required maxlength="60" placeholder="Hemmalag (1)" aria-label="Hemmalag">
       </div>
       <div>
-        <label for="away">Bortalag <span class="hint">(2)</span></label>
-        <input id="away" required maxlength="60" placeholder="SSG">
+        <input id="away" required maxlength="60" placeholder="Bortalag (2)" aria-label="Bortalag">
       </div>
       <div class="full">
         <label>Matchtyp</label>
@@ -425,11 +431,11 @@
         <label>Avspark <span class="hint">(omröstningen stänger här)</span></label>
         <div class="chips" id="date-chips">
           <span class="chips-label">Datum</span>
-          <input id="kickoff-date" type="date" class="dt-input" required aria-label="Annat datum">
+          <input id="kickoff-date" type="date" class="dt-input" required aria-label="Datum">
         </div>
         <div class="chips" id="time-chips">
           <span class="chips-label">Tid</span>
-          <input id="kickoff-time" type="time" class="dt-input" required aria-label="Annan tid">
+          <input id="kickoff-time" type="time" class="dt-input" required aria-label="Tid">
         </div>
       </div>
     </div>
@@ -438,27 +444,6 @@
     </div>
     <p class="notice error" id="form-error" hidden></p>
   </form>
-
-  <div class="panel" id="batch-panel">
-    <h2>Skapa flera (omgång)</h2>
-    <label for="batch-fixtures">Matcher <span class="hint">(en per rad: Hemmalag – Bortalag · valfritt @ tid och (dam)/(herr))</span></label>
-    <textarea id="batch-fixtures" rows="4" placeholder="Örgryte IS – GAIS @ 15:00&#10;Rosengård – BK Häcken (dam) @ 17:30"></textarea>
-    <div class="grid">
-      <div class="full">
-        <label>Matchtyp <span class="hint">(standard för rader utan markering)</span></label>
-        <div class="segmented" id="batch-category" role="group" aria-label="Matchtyp">
-          <button type="button" data-category="herr" aria-pressed="false">Herr</button>
-          <button type="button" data-category="dam" aria-pressed="false">Dam</button>
-        </div>
-      </div>
-      <div>
-        <label for="batch-kickoff">Avspark <span class="hint">(standard, överstyrs med @ på raden)</span></label>
-        <input id="batch-kickoff" type="datetime-local">
-      </div>
-    </div>
-    <button class="primary" type="button" id="batch-create">Skapa omröstningar</button>
-    <p class="notice error" id="batch-error" hidden></p>
-  </div>
 
   <div class="panel" id="list-panel">
     <h2>Omröstningar</h2>
@@ -693,10 +678,6 @@
   categoryGroup.addEventListener('click', scheduleLivePreview);
 
   // Date/time quick-pick chips for the create form's avspark.
-  var dateChips = document.getElementById('date-chips');
-  var timeChips = document.getElementById('time-chips');
-  var kickoffDate = document.getElementById('kickoff-date');
-  var kickoffTime = document.getElementById('kickoff-time');
   var KICKOFF_TIMES = ['13:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
 
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -707,12 +688,7 @@
     });
   }
 
-  function clearChips() {
-    syncChips(dateChips, null);
-    syncChips(timeChips, null);
-  }
-
-  function makeChip(label, value, input, container) {
+  function makeChip(label, value, input, container, onChange) {
     var chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'chip';
@@ -721,27 +697,38 @@
     chip.addEventListener('click', function () {
       input.value = value;
       syncChips(container, value);
-      scheduleLivePreview();
+      if (onChange) onChange();
     });
     return chip;
   }
 
-  (function buildKickoffChips() {
+  /** Builds "next 8 days" + common-times chips into the containers, wired to the inputs. */
+  function setupKickoffChips(dateContainer, dateInput, timeContainer, timeInput, onChange) {
     var today = new Date();
     for (var i = 0; i < 8; i++) {
       var d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
       var value = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
       var label = i === 0 ? 'Idag' : i === 1 ? 'Imorgon'
         : d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
-      dateChips.insertBefore(makeChip(label, value, kickoffDate, dateChips), kickoffDate);
+      dateContainer.appendChild(makeChip(label, value, dateInput, dateContainer, onChange));
     }
     KICKOFF_TIMES.forEach(function (time) {
-      timeChips.insertBefore(makeChip(time, time, kickoffTime, timeChips), kickoffTime);
+      timeContainer.appendChild(makeChip(time, time, timeInput, timeContainer, onChange));
     });
-  })();
+    dateInput.addEventListener('input', function () { syncChips(dateContainer, dateInput.value); if (onChange) onChange(); });
+    timeInput.addEventListener('input', function () { syncChips(timeContainer, timeInput.value); if (onChange) onChange(); });
+  }
 
-  kickoffDate.addEventListener('input', function () { syncChips(dateChips, kickoffDate.value); scheduleLivePreview(); });
-  kickoffTime.addEventListener('input', function () { syncChips(timeChips, kickoffTime.value); scheduleLivePreview(); });
+  var dateChips = document.getElementById('date-chips');
+  var timeChips = document.getElementById('time-chips');
+  var kickoffDate = document.getElementById('kickoff-date');
+  var kickoffTime = document.getElementById('kickoff-time');
+  setupKickoffChips(dateChips, kickoffDate, timeChips, kickoffTime, scheduleLivePreview);
+
+  function clearChips() {
+    syncChips(dateChips, null);
+    syncChips(timeChips, null);
+  }
 
   // The preview iframe resizes itself the same way an embedded widget does.
   window.addEventListener('message', function (event) {
@@ -792,127 +779,6 @@
         formError.textContent = error.message;
         formError.hidden = false;
       });
-  });
-
-  // Skapa flera omröstningar (en hel omgång) på en gång, med delad matchtyp och avspark.
-  var batchCategory = document.getElementById('batch-category');
-  wireCategory(batchCategory);
-
-  /**
-   * Parses "Hemmalag – Bortalag" lines into fixtures; reports unparseable row
-   * numbers. Two optional trailing markers override the shared defaults, so an
-   * omgång can mix both match types and kickoff times:
-   *   "(dam)"/"(herr)"   — match type
-   *   "@ 15:00"          — time on the shared date
-   *   "@ 2026-08-15 15:00" — full date + time
-   */
-  function parseFixtures(text) {
-    var fixtures = [];
-    var errors = [];
-    text.split('\n').forEach(function (raw, index) {
-      var line = raw.trim();
-      if (!line) return;
-
-      var category = null;
-      var marker = line.match(/\((herr|dam)\)\s*$/i);
-      if (marker) {
-        category = marker[1].toLowerCase();
-        line = line.slice(0, marker.index).trim();
-      }
-
-      var kickoff = null;
-      var at = line.match(/@\s*(.+)$/);
-      if (at) {
-        var spec = at[1].trim();
-        line = line.slice(0, at.index).trim();
-        if (/^\d{1,2}:\d{2}$/.test(spec)) {
-          kickoff = { time: spec };
-        } else if (/^\d{4}-\d{2}-\d{2}[ T]\d{1,2}:\d{2}$/.test(spec)) {
-          kickoff = { local: spec.replace(' ', 'T') };
-        } else {
-          errors.push(index + 1);
-          return;
-        }
-      }
-
-      var parts = line.split(/\s+[–-]\s+/);
-      var home = (parts[0] || '').trim();
-      var away = (parts[1] || '').trim();
-      if (parts.length !== 2 || !home || !away) {
-        errors.push(index + 1);
-      } else {
-        fixtures.push({ homeTeam: home, awayTeam: away, category: category, kickoff: kickoff, row: index + 1 });
-      }
-    });
-    return { fixtures: fixtures, errors: errors };
-  }
-
-  document.getElementById('batch-create').addEventListener('click', function () {
-    var batchError = document.getElementById('batch-error');
-    batchError.hidden = true;
-
-    var parsed = parseFixtures(document.getElementById('batch-fixtures').value);
-    if (parsed.errors.length) {
-      batchError.textContent = 'Rad ' + parsed.errors.join(', ') + ' kunde inte tolkas – skriv "Hemmalag – Bortalag"';
-      batchError.hidden = false;
-      return;
-    }
-    if (!parsed.fixtures.length) {
-      batchError.textContent = 'Skriv minst en match';
-      batchError.hidden = false;
-      return;
-    }
-
-    // Shared avspark is the default; a line may override it with "@ ...".
-    var sharedLocal = document.getElementById('batch-kickoff').value;
-    var sharedDate = sharedLocal ? sharedLocal.slice(0, 10) : '';
-
-    function fixtureKickoff(fixture) {
-      if (!fixture.kickoff) return OB_TIME.toIso(sharedLocal);
-      if (fixture.kickoff.local) return OB_TIME.toIso(fixture.kickoff.local);
-      if (!sharedDate) return null;
-      var time = fixture.kickoff.time;
-      if (time.length === 4) time = '0' + time;
-      return OB_TIME.toIso(sharedDate + 'T' + time);
-    }
-
-    var missing = parsed.fixtures.filter(function (f) { return !fixtureKickoff(f); });
-    if (missing.length) {
-      batchError.textContent = 'Rad ' + missing.map(function (f) { return f.row; }).join(', ') +
-        ' saknar avspark – ange en gemensam avspark eller datum på raden';
-      batchError.hidden = false;
-      return;
-    }
-
-    var defaultCategory = categoryValue(batchCategory);
-    var created = 0;
-
-    // Sequentially, so a whole round doesn't hammer the API at once.
-    parsed.fixtures.reduce(function (chain, fixture) {
-      return chain.then(function () {
-        return api('/api/polls', {
-          method: 'POST',
-          body: JSON.stringify({
-            homeTeam: fixture.homeTeam,
-            awayTeam: fixture.awayTeam,
-            category: fixture.category || defaultCategory,
-            kickoff: fixtureKickoff(fixture)
-          })
-        }).then(function () { created += 1; }, function () {});
-      });
-    }, Promise.resolve()).then(function () {
-      if (created === parsed.fixtures.length) {
-        showToast('Skapade ' + created + (created === 1 ? ' omröstning' : ' omröstningar'));
-      } else {
-        batchError.textContent = 'Skapade ' + created + ' av ' + parsed.fixtures.length;
-        batchError.hidden = false;
-      }
-      if (created) {
-        document.getElementById('batch-fixtures').value = '';
-        batchCategory.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
-        loadPolls();
-      }
-    });
   });
 
   /** Fades and slides a card in when shown, and out before it's hidden. */
