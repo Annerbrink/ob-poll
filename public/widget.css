@@ -31,8 +31,9 @@
   --color-raised-hover: #eef2f7;
 
   /* Author view: a greyer page backdrop so the white panels read as cards
-     without outlines. */
-  --color-app-bg: #eceff4;
+     without outlines. Kept clearly deeper than --color-raised-hover so filled
+     fields stay visible on a hovered row. */
+  --color-app-bg: #e2e7ee;
   --color-panel: #ffffff;
 
   --color-text: #1f1f1f;
@@ -174,9 +175,10 @@ h1 {
 
 .ask {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: .75rem;
+  gap: .25rem .75rem;
   margin: 1.25rem 0 .75rem;
 }
 
@@ -198,6 +200,7 @@ h1 {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 0;
   gap: .3125rem;
   padding: 1.125rem .375rem;
   border: 1.5px solid transparent;
@@ -302,6 +305,16 @@ footer p { margin: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .choice, .sk { transition: none; animation: none; }
+}
+
+/* Narrow phones: tighten the card so the three choices fit at ~310px wide. */
+@media (max-width: 380px) {
+  body { padding: .375rem; }
+  .poll { padding: 1.125rem 1rem; border-radius: 1rem; }
+  h1 { font-size: 1.3125rem; }
+  .choices { gap: .375rem; }
+  .choice { padding: .875rem .25rem; }
+  .choice .sign { font-size: 1.25rem; }
 }
 
 [hidden] { display: none !important; }

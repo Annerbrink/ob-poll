@@ -92,7 +92,9 @@
   .copy-btn svg { width: 1rem; height: 1rem; }
 
   @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
+    /* minmax(0,…) so the column can shrink below its content and the chip rows
+       scroll sideways instead of widening the page. */
+    .layout { grid-template-columns: minmax(0, 1fr); }
     .col-side { position: static; }
   }
 
@@ -124,7 +126,15 @@
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .875rem; }
 
-  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  /* Allow cells to shrink below content so the horizontally-scrolling chip rows
+     stay inside the panel instead of pushing the page wider. */
+  .grid > * { min-width: 0; }
+
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: 1fr; }
+    body { padding: 1.5rem .75rem; }
+    form, .panel { padding: 1.125rem; }
+  }
 
   .grid .full { grid-column: 1 / -1; }
 
@@ -583,8 +593,6 @@
           <button type="button" class="chip" data-category="herr" aria-pressed="false">Herr</button>
           <button type="button" class="chip" data-category="dam" aria-pressed="false">Dam</button>
         </div>
-      </div>
-      <div class="full">
         <div class="chips" id="date-chips">
           <span class="chips-label">Datum</span>
           <input id="kickoff-date" type="date" class="dt-input" required aria-label="Datum">
