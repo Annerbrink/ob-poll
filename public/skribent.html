@@ -80,9 +80,9 @@
     width: 1.875rem;
     height: 1.875rem;
     padding: 0;
-    border: 1px solid var(--color-border-strong);
+    border: 0;
     border-radius: var(--radius-button);
-    background: var(--color-surface-page);
+    background: var(--color-app-bg);
     color: var(--color-text-secondary);
     cursor: pointer;
     transition: border-color .12s ease, background .12s ease, color .12s ease;
@@ -114,10 +114,11 @@
     margin-bottom: 1.25rem;
   }
 
-  /* The inline editor sits on a panel, so it takes the backdrop tone to read as
-     an inset rather than blending into the white card. */
+  /* The inline editor is transparent so its filled fields (the backdrop tone)
+     read cleanly on the panel without a nested card or outline. */
   .edit-form {
-    background: var(--color-app-bg);
+    background: transparent;
+    padding: .25rem 0 0;
     margin-bottom: 0;
   }
 
@@ -184,21 +185,20 @@
     align-items: center;
     height: 2.25rem;
     padding: 0 .8125rem;
-    border: 1px solid var(--color-border-strong);
+    border: 0;
     border-radius: var(--radius-button-themed);
-    background: var(--color-surface-page);
+    background: var(--color-app-bg);
     color: var(--color-text);
     font: inherit;
     font-size: .8125rem;
     cursor: pointer;
-    transition: border-color .12s ease, background .12s ease, color .12s ease, transform .06s ease;
+    transition: background .12s ease, color .12s ease, transform .06s ease;
   }
 
-  .chip:hover { border-color: var(--color-theme-primary); background: var(--color-theme-tertiary); }
+  .chip:hover { background: var(--color-raised-hover); }
   /* .active for date/time chips; aria-pressed for the Matchtyp toggle chips. */
   .chip.active,
   .chip[aria-pressed="true"] {
-    border-color: var(--color-theme-primary);
     background: var(--color-theme-primary);
     color: var(--color-button-primary-foreground);
   }
@@ -212,11 +212,22 @@
     field-sizing: content;
     height: 2.25rem;
     padding: 0 .8125rem;
-    border: 1px solid var(--color-border-strong);
+    border: 0;
     border-radius: var(--radius-button-themed);
-    background: var(--color-surface-page);
+    background: var(--color-app-bg);
     font-size: .8125rem;
     color: var(--color-text-secondary);
+  }
+
+  /* In the inline editor the date/time pickers are plain full-width fields
+     (no quick-pick chips), so they fill their column like the text inputs. */
+  .dt-input-block {
+    width: 100%;
+    field-sizing: normal;
+    height: auto;
+    padding: .625rem .75rem;
+    border-radius: var(--radius-button);
+    color: var(--color-text);
   }
 
   /* Keep the value block from stretching to the field's full width, so the icon
@@ -235,36 +246,36 @@
     background: center / contain no-repeat;
   }
 
-  #kickoff-date::-webkit-calendar-picker-indicator {
+  .dt-input[type="date"]::-webkit-calendar-picker-indicator {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23505762'%3E%3Cpath d='M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z'/%3E%3C/svg%3E");
   }
 
-  #kickoff-time::-webkit-calendar-picker-indicator {
+  .dt-input[type="time"]::-webkit-calendar-picker-indicator {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23505762'%3E%3Cpath d='M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z'/%3E%3C/svg%3E");
   }
 
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) #kickoff-date::-webkit-calendar-picker-indicator {
+    :root:not([data-theme]) .dt-input[type="date"]::-webkit-calendar-picker-indicator {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23e4e8ee'%3E%3Cpath d='M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z'/%3E%3C/svg%3E");
     }
-    :root:not([data-theme]) #kickoff-time::-webkit-calendar-picker-indicator {
+    :root:not([data-theme]) .dt-input[type="time"]::-webkit-calendar-picker-indicator {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23e4e8ee'%3E%3Cpath d='M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z'/%3E%3C/svg%3E");
     }
   }
 
-  :root[data-theme="dark"] #kickoff-date::-webkit-calendar-picker-indicator {
+  :root[data-theme="dark"] .dt-input[type="date"]::-webkit-calendar-picker-indicator {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23e4e8ee'%3E%3Cpath d='M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z'/%3E%3C/svg%3E");
   }
-  :root[data-theme="dark"] #kickoff-time::-webkit-calendar-picker-indicator {
+  :root[data-theme="dark"] .dt-input[type="time"]::-webkit-calendar-picker-indicator {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%23e4e8ee'%3E%3Cpath d='M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z'/%3E%3C/svg%3E");
   }
 
   button.secondary {
     margin-top: 1.125rem;
     padding: .6875rem 1.375rem;
-    border: 1px solid var(--color-theme-primary);
+    border: 0;
     border-radius: var(--radius-button-themed);
-    background: var(--color-surface-page);
+    background: var(--color-app-bg);
     color: var(--color-theme-primary);
     font: inherit;
     font-weight: 700;
@@ -272,7 +283,7 @@
     transition: background .14s ease, transform .06s ease;
   }
 
-  button.secondary:hover { background: var(--color-theme-tertiary); }
+  button.secondary:hover { background: var(--color-raised-hover); }
 
   #preview-frame { width: 100%; max-width: 520px; height: 500px; border: 0; }
 
@@ -288,22 +299,18 @@
   input {
     width: 100%;
     padding: .625rem .75rem;
-    border: 1px solid var(--color-border-strong);
+    border: 0;
     border-radius: var(--radius-button);
-    background: var(--color-surface-page);
+    background: var(--color-app-bg);
     color: var(--color-text);
     font: inherit;
-    transition: border-color .12s ease;
   }
-
-  input:hover, .list-controls select:hover, textarea:hover { border-color: var(--color-text-secondary); }
 
   input:focus-visible,
   .list-controls select:focus-visible,
   textarea:focus-visible {
     outline: 2px solid var(--color-theme-primary);
     outline-offset: 1px;
-    border-color: var(--color-theme-primary);
   }
 
   button.primary {
@@ -329,9 +336,9 @@
     width: 100%;
     min-height: 6rem;
     padding: .625rem;
-    border: 1px solid var(--color-border-strong);
+    border: 0;
     border-radius: var(--radius-button);
-    background: var(--color-surface-minimal);
+    background: var(--color-app-bg);
     color: var(--color-text);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: .75rem;
@@ -414,9 +421,9 @@
     width: 2rem;
     height: 2rem;
     padding: 0;
-    border: 1px solid var(--color-border-strong);
+    border: 0;
     border-radius: var(--radius-button);
-    background: var(--color-surface-page);
+    background: var(--color-app-bg);
     color: var(--color-text-secondary);
     cursor: pointer;
     text-decoration: none;
@@ -485,9 +492,9 @@
     appearance: none;
     -webkit-appearance: none;
     padding: .625rem 2.25rem .625rem .75rem;
-    border: 1px solid var(--color-border-strong);
+    border: 0;
     border-radius: var(--radius-button);
-    background: var(--color-surface-page) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23505762' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right .75rem center;
+    background: var(--color-app-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23505762' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right .75rem center;
     color: var(--color-text);
     font: inherit;
     cursor: pointer;
@@ -697,15 +704,21 @@
     return active ? active.dataset.category : null;
   }
 
-  /** Builds a Herr/Dam control with `current` preselected, for the editors. */
+  /** Builds a Matchtyp pill row (label + Herr/Dam chips) with `current`
+      preselected, matching the create form — used by the inline editor. */
   function categoryControl(current) {
     var group = document.createElement('div');
-    group.className = 'segmented';
+    group.className = 'chips';
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', 'Matchtyp');
+    var label = document.createElement('span');
+    label.className = 'chips-label';
+    label.textContent = 'Matchtyp';
+    group.appendChild(label);
     [['herr', 'Herr'], ['dam', 'Dam']].forEach(function (pair) {
       var button = document.createElement('button');
       button.type = 'button';
+      button.className = 'chip';
       button.dataset.category = pair[0];
       button.textContent = pair[1];
       button.setAttribute('aria-pressed', current === pair[0] ? 'true' : 'false');
@@ -1132,11 +1145,25 @@
     away.maxLength = 60; away.required = true; away.value = poll.awayTeam;
     field('Bortalag', away);
 
-    var category = field('Matchtyp', categoryControl(poll.category), true);
+    // Matchtyp as pills (its own label), full width — same as the create form.
+    var category = categoryControl(poll.category);
+    var catWrap = document.createElement('div');
+    catWrap.className = 'full';
+    catWrap.appendChild(category);
+    grid.appendChild(catWrap);
 
-    var kickoff = document.createElement('input');
-    kickoff.type = 'datetime-local'; kickoff.required = true; kickoff.value = OB_TIME.toInput(poll.kickoff);
-    field('Avspark', kickoff);
+    // Avspark as plain manual date + time pickers — no quick-pick chips here.
+    var dateInput = document.createElement('input');
+    dateInput.type = 'date'; dateInput.className = 'dt-input dt-input-block'; dateInput.required = true;
+    var timeInput = document.createElement('input');
+    timeInput.type = 'time'; timeInput.className = 'dt-input dt-input-block'; timeInput.required = true;
+
+    var local = OB_TIME.toInput(poll.kickoff);
+    dateInput.value = local ? local.slice(0, 10) : '';
+    timeInput.value = local ? local.slice(11, 16) : '';
+
+    field('Datum', dateInput);
+    field('Avspark', timeInput);
 
     var save = document.createElement('button');
     save.className = 'primary'; save.type = 'submit'; save.textContent = 'Spara';
@@ -1157,7 +1184,9 @@
       event.preventDefault();
       errorText.hidden = true;
 
-      var kickoffIso = OB_TIME.toIso(kickoff.value);
+      var kickoffIso = dateInput.value && timeInput.value
+        ? OB_TIME.toIso(dateInput.value + 'T' + timeInput.value)
+        : null;
       if (!kickoffIso) {
         errorText.textContent = 'Avspark måste anges';
         errorText.hidden = false;
